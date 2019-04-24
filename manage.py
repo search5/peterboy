@@ -7,6 +7,8 @@ from flask.cli import FlaskGroup
 from peterboy import main
 from subprocess import Popen, PIPE
 
+# export AUTHLIB_INSECURE_TRANSPORT=true
+
 
 def create_app():
     return main.app
