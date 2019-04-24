@@ -1,8 +1,8 @@
 import os
 
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, url_for, redirect
 from flask.views import MethodView
-from authlib.flask.oauth1 import AuthorizationServer
+from authlib.flask.oauth1 import AuthorizationServer, current_credential
 from authlib.flask.oauth1.sqla import create_query_client_func, \
     register_authorization_hooks
 from oauthlib.oauth1 import OAuth1Error
@@ -69,14 +69,21 @@ def issue_token():
 class UserAuthAPI(MethodView):
     def get(self):
         # 톰보이가 서버 연결 요청 버튼을 누르면 여기로 요청된다.
-        print(request.args)
+        print(server.create_temporary_credentials_response())
 
-        return jsonify({
+        resp = {
             "oauth_request_token_url": "http://127.0.0.1:5002/oauth/request_token",
             "oauth_authorize_url": "http://127.0.0.1:5002/oauth/authorize",
             "oauth_access_token_url": "http://127.0.0.1:5002/oauth/access_token",
             "api-version": "1.0"
-        })
+        }
+
+        resp.update({"user-ref": {
+            "api-ref": "http://127.0.0.1:5002/api/1.0/sally",
+            "href": "http://127.0.0.1:5002/sally"
+        }})
+
+        return jsonify(resp)
 
     def post(self):
         print("POST 요청")
