@@ -8,6 +8,8 @@ from peterboy import main
 from subprocess import Popen, PIPE
 
 # export AUTHLIB_INSECURE_TRANSPORT=true
+from peterboy.database import db_session
+from peterboy.models import Client, User
 
 
 def create_app():
@@ -34,6 +36,21 @@ def upload():
     """구글에 데이터 업로드 하기"""
     proc = Popen(shlex.split("gcloud app deploy --project=peterboy --version=20190424t110524"), stdout=PIPE)
     proc.communicate()
+
+
+@cli.command()
+def prepare():
+    user = User(username='foo')
+    db_session.add(user)
+    db_session.commit()
+    client = Client(
+        user_id=user.id,
+        client_id='anyone',
+        client_secret='',
+        default_redirect_uri='http://localhost:8000/tomboy-web-sync/',
+    )
+    db_session.add(client)
+    db_session.commit()
 
 
 @cli.command()

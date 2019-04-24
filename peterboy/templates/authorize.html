@@ -1,1 +1,29 @@
-{{ req }}
+{{ req.auth_params }}
+ {{ req.body }}
+ {{ req.body_params }}
+ {{ req.client }}
+ {{ req.client_id }}
+ {{ req.client_secret }}
+ {{ req.credential }}
+ {{ req.headers }}
+ {{ req.method }}
+ {{ req.oauth_params }}
+ {{ req.params }}
+ {{ req.query }}
+ {{ req.query_params }}
+ {{ req.realm }}
+ {{ req.redirect_uri }}
+ {{ req.rsa_public_key }}
+ {{ req.signature }}
+ {{ req.signature_method }}
+ {{ req.signature_type }}
+ {{ req.timestamp }}
+ {{ req.token }}
+ {{ req.token_secret }}
+ {{ req.uri }}
+ {{ req.user }}
+
+<form action="/oauth/authorize" method="post">
+  <input type="hidden" name="granted" value="1">
+  <button type="submit">인증</button>
+</form>

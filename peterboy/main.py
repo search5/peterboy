@@ -3,7 +3,8 @@ import os
 from flask import Flask, jsonify, request, render_template
 from flask.views import MethodView
 from authlib.flask.oauth1 import AuthorizationServer
-from authlib.flask.oauth1.sqla import create_query_client_func
+from authlib.flask.oauth1.sqla import create_query_client_func, \
+    register_authorization_hooks
 from oauthlib.oauth1 import OAuth1Error
 from sqlalchemy.sql.functions import current_user
 
@@ -16,8 +17,9 @@ os.environ['AUTHLIB_INSECURE_TRANSPORT'] = 'true'
 app = Flask(__name__)
 query_client = create_query_client_func(db_session, Client)
 
-server = AuthorizationServer()
-server.init_app(app, query_client=query_client)
+# server = AuthorizationServer()
+server = AuthorizationServer(app, query_client=query_client)
+# server.init_app(app, query_client=query_client)
 
 from authlib.flask.oauth1.sqla import (
     register_nonce_hooks,
@@ -25,9 +27,12 @@ from authlib.flask.oauth1.sqla import (
     register_token_credential_hooks
 )
 
-register_nonce_hooks(server, db_session, TimestampNonce)
-register_temporary_credential_hooks(server, db_session, TemporaryCredential)
-register_token_credential_hooks(server, db_session, TokenCredential)
+register_authorization_hooks(
+    server, db_session,
+    token_credential_model=TokenCredential,
+    temporary_credential_model=TemporaryCredential,
+    timestamp_nonce_model=TimestampNonce,
+)
 
 # def token_generator():
 #     return {
@@ -41,8 +46,12 @@ def main():
     return "Welcome to Peterboy (Tomboy Sync Server)"
 
 
-@app.route('/oauth/request_token', methods=['POST'])
+@app.route('/oauth/request_token', methods=['GET', 'POST'])
 def initiate_temporary_credential():
+    req_form = {'oauth_consumer_key': 'client',
+            'oauth_callback': 'oob',
+            'oauth_signature_method': 'PLAINTEXT',
+            'oauth_signature': 'secret&'}
     return server.create_temporary_credentials_response()
 
 
@@ -52,8 +61,9 @@ def authorize():
     if request.method == 'GET':
         try:
             req = server.check_authorization_request()
-            # return render_template('authorize.html', req=req)
-            return 'ok'
+            print(dir(req))
+            return render_template('authorize.html', req=req)
+            # return 'ok'
         except OAuth1Error as error:
             return render_template('error.html', error=error)
 
