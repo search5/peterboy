@@ -77,10 +77,17 @@ def authorization2dict(header):
 
     return resp
 
+
+@app.route("/<username>")
+def user_space():
+    return {}
+
+
 class UserAuthAPI(MethodView):
     def get(self):
         # 톰보이가 서버 연결 요청 버튼을 누르면 여기로 요청된다.
-        # (('Authorization', 'OAuth realm="Snowy",oauth_consumer_key="anyone",oauth_nonce="2734326",oauth_signature="E%2ff1iIaKCpuGerCilxp5hLAnraQ%3d",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1556095513",oauth_token="rqVdtT59TmALCDrsN1Wlp3TSJY6mSTuveUuqXXaDUCAj8cdn",oauth_version="1.0"'), ('Connection', 'keep-alive'), ('Host', 'localhost:5002'))
+        # 여기에서 아이디를 받아 ID별로 사용자 구분(URL의 일부로 받을지 아니면 query param으로 받을건지 고민은 해봐야 함)
+        # 단, URL의 일부로 받을 경우 /api/1.0은 개별 유저 공간에 포함되어야 하고 query param으로 받으면 그대로 루트 URL에 API가 속하게 됨
 
         resp = {
             "oauth_request_token_url": "http://127.0.0.1:5002/oauth/request_token",
