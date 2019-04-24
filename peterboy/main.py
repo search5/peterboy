@@ -74,7 +74,7 @@ def authorize():
         grant_user = None
 
     try:
-        return server.create_authorization_response(grant_user)
+        return server.create_authorization_response(request, grant_user)
     except OAuth1Error as error:
         return render_template('error.html', error=error)
 

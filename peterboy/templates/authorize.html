@@ -23,7 +23,9 @@
  {{ req.uri }}
  {{ req.user }}
 
-<form action="/oauth/authorize" method="post">
+<form action="{{ req.uri }}" method="post">
   <input type="hidden" name="granted" value="1">
+  <input type="hidden" name="token" value="{{ req.token }}">
+  <input type="hidden" name="credential" value="{{ req.credential }}">
   <button type="submit">인증</button>
 </form>

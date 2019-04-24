@@ -46,8 +46,8 @@ def prepare():
     client = Client(
         user_id=user.id,
         client_id='anyone',
-        client_secret='',
-        default_redirect_uri='http://localhost:8000/tomboy-web-sync/',
+        client_secret='anyone',
+        default_redirect_uri='oob',
     )
     db_session.add(client)
     db_session.commit()
