@@ -1,31 +1,44 @@
-{{ req.auth_params }}
- {{ req.body }}
- {{ req.body_params }}
- {{ req.client }}
- {{ req.client_id }}
- {{ req.client_secret }}
- {{ req.credential }}
- {{ req.headers }}
- {{ req.method }}
- {{ req.oauth_params }}
- {{ req.params }}
- {{ req.query }}
- {{ req.query_params }}
- {{ req.realm }}
- {{ req.redirect_uri }}
- {{ req.rsa_public_key }}
- {{ req.signature }}
- {{ req.signature_method }}
- {{ req.signature_type }}
- {{ req.timestamp }}
- {{ req.token }}
- {{ req.token_secret }}
- {{ req.uri }}
- {{ req.user }}
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-<form action="{{ req.uri }}" method="post">
-  <input type="hidden" name="granted" value="1">
-  <input type="hidden" name="token" value="{{ req.token }}">
-  <input type="hidden" name="credential" value="{{ req.credential }}">
-  <button type="submit">인증</button>
-</form>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <title>Hello, world!</title>
+  </head>
+  <body>
+    <main role="main" class="container">
+      <div class="starter-template">
+        <h1>Tomboy Sync Server</h1>
+
+        <h4>톰보이(Tomboy) 앱이 동기화 서버 접근을 요청합니다. 허용하시겠습니까?</h4>
+        <hr>
+        <b>권한검토</b>
+        <ul>
+          <li>노트 목록 조회</li>
+          <li>노트 조회</li>
+          <li>노트 추가</li>
+          <li>노트 삭제</li>
+          <li>노트 수정</li>
+        </ul>
+
+        <form action="{{ req.uri }}" method="post">
+          <input type="hidden" name="granted" value="1">
+          <input type="hidden" name="token" value="{{ req.token }}">
+          <input type="hidden" name="credential" value="{{ req.credential }}">
+          <button type="submit" class="btn btn-primary">인증</button>
+        </form>
+      </div>
+    </main>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+  </body>
+</html>
