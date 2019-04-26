@@ -35,6 +35,16 @@ def main():
     return render_template('web/index.html')
 
 
+@app.route('/signup')
+def signup():
+    return render_template('web/signup.html')\
+
+
+@app.route('/signin')
+def signin():
+    return render_template('web/signin.html')
+
+
 @app.route('/oauth/request_token', methods=['GET', 'POST'])
 def initiate_temporary_credential():
     return server.create_temporary_credentials_response()
