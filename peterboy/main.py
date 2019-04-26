@@ -46,9 +46,9 @@ def authorize():
     if request.method == 'GET':
         try:
             req = server.check_authorization_request()
-            return render_template('authorize.html', req=req)
+            return render_template('oauth/authorize.html', req=req)
         except OAuth1Error as error:
-            return render_template('error.html', error=error)
+            return render_template('oauth/error.html', error=error)
 
     granted = request.form.get('granted')
     if granted:
@@ -59,7 +59,7 @@ def authorize():
     try:
         return server.create_authorization_response(request, grant_user)
     except OAuth1Error as error:
-        return render_template('error.html', error=error)
+        return render_template('oauth/error.html', error=error)
 
 
 @app.route('/oauth/access_token', methods=['POST'])
