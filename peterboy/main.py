@@ -32,7 +32,7 @@ register_authorization_hooks(
 
 @app.route('/')
 def main():
-    return "Welcome to Peterboy (Tomboy Sync Server)"
+    return render_template('web/index.html')
 
 
 @app.route('/oauth/request_token', methods=['GET', 'POST'])
