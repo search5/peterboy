@@ -3,3 +3,4 @@ oauthlib
 sqlalchemy
 gunicorn
 authlib
+google-cloud-datastore
