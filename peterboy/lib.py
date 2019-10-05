@@ -1,0 +1,1 @@
+NOTE_DATETIMESTAMP = "%Y-%m-%dT%H:%M:%S.%f+09:00"
