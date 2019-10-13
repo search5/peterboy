@@ -93,7 +93,7 @@ class PeterboySync(Base):
 
 
 class PeterboySyncServer(Base):
-    __tablename__ = 'peterbody_sync_config'
+    __tablename__ = 'peterboy_sync_config'
 
     config_key = Column(String(100), primary_key=True, comment='설정 키')
     config_value = Column(String(255), primary_key=True, comment='설정 값')

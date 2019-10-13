@@ -88,13 +88,17 @@ def calc_line():
 
 
 @cli.command()
-def petery_sync_config():
+def peterboy_sync_config():
     """피터보이 싱크 서버 환경 설정"""
 
     config = PeterboySyncServer()
     config.config_key = 'Host'
     config.config_value = 'http://locahost:5002'
 
+    db_session.add(config)
+    db_session.commit()
+
+    click.echo('서버 기본 환경 설정 값이 추가되었습니다 ')
 
 
 if __name__ == '__main__':
