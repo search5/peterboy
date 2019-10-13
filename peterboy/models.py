@@ -57,7 +57,7 @@ class PeterboyNote(Base):
 
     guid = Column(String(36), comment='고유키', primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))
-    title = Column(String(255),comment='노트 제목')
+    title = Column(String(255), comment='노트 제목')
     note_content = Column(Text, comment="노트 내용")
     note_content_version = Column(Float, default=0.1, comment='노트 버전')
     last_change_date = Column(String(33), comment="노트 변경일")
@@ -67,7 +67,7 @@ class PeterboyNote(Base):
     open_on_startup = Column(Boolean, comment='톰보이 실행시 같이 보여줄지 여부')
     pinned = Column(Boolean, comment='노트 고정 여부')
     tags = Column(JSON, comment='태그')
-    
+
     def toTomboy(self):
         return {
             'guid': self.guid,
@@ -83,6 +83,7 @@ class PeterboyNote(Base):
             'last-sync-revision': 1
         }
 
+
 class PeterboySync(Base):
     __tablename__ = 'peterboy_sync'
 
@@ -90,8 +91,16 @@ class PeterboySync(Base):
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))
     latest_sync_revision = Column(Integer, comment='마지막 싱크 리비전')
 
+
 class PeterboySyncServer(Base):
     __tablename__ = 'peterbody_sync_config'
 
     config_key = Column(String(100), primary_key=True, comment='설정 키')
     config_value = Column(String(255), primary_key=True, comment='설정 값')
+
+    @classmethod
+    def get_config(cls, key_name):
+        record = cls.query.filter(cls.config_key == key_name).first()
+        if record:
+            return record.config_value
+        return ''

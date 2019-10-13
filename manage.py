@@ -9,7 +9,7 @@ from subprocess import Popen, PIPE
 
 # export AUTHLIB_INSECURE_TRANSPORT=true
 from peterboy.database import db_session
-from peterboy.models import Client, User
+from peterboy.models import Client, User, PeterboySyncServer
 
 
 def create_app():
@@ -85,6 +85,16 @@ def calc_line():
 
     click.echo('현재까지 {0:#,} 줄을 작성하셨습니다. 분발하셔야 하겠어요'.format(wc))
     click.echo('현재까지 {0:#,} 용량을 작성하셨습니다. 분발하셔야 하겠어요'.format(size))
+
+
+@cli.command()
+def petery_sync_config():
+    """피터보이 싱크 서버 환경 설정"""
+
+    config = PeterboySyncServer()
+    config.config_key = 'Host'
+    config.config_value = 'http://locahost:5002'
+
 
 
 if __name__ == '__main__':
