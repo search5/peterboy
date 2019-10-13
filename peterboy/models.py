@@ -55,15 +55,17 @@ def set_user_id(self, user_id):
 class PeterboyNote(Base):
     __tablename__ = 'peterboy_note'
 
-    guid = Column(String(36), comment='고유키', primary_key=True)
+    id = Column(Integer, primary_key=True)
+    guid = Column(String(36), comment='고유키')
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))
     title = Column(String(255), comment='노트 제목')
+    title_slug = Column(Text, comment='노트 제목(Slugify')
     note_content = Column(Text, comment="노트 내용")
     note_content_version = Column(Float, default=0.1, comment='노트 버전')
     last_change_date = Column(String(33), comment="노트 변경일")
     last_metadata_change_date = Column(String(33), comment='노트 정보 변경일')
     create_date = Column(String(33), comment='노트 생성일')
-    last_sync_revision = Column(Integer, comment='노트 리비전')
+    last_sync_revision = Column(Integer, comment='노트 싱크 리비전')
     open_on_startup = Column(Boolean, comment='톰보이 실행시 같이 보여줄지 여부')
     pinned = Column(Boolean, comment='노트 고정 여부')
     tags = Column(JSON, comment='태그')
@@ -80,7 +82,7 @@ class PeterboyNote(Base):
             'open-on-startup': self.open_on_startup,
             'pinned': self.pinned,
             'tags': self.tags,
-            'last-sync-revision': 1
+            'last-sync-revision': self.last_sync_revision
         }
 
 
@@ -89,7 +91,8 @@ class PeterboySync(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))
-    latest_sync_revision = Column(Integer, comment='마지막 싱크 리비전')
+    latest_sync_revision = Column(Integer, default=0, comment='마지막 싱크 리비전')
+    current_sync_guid = Column(String(36), comment='싱크 고유키')
 
 
 class PeterboySyncServer(Base):

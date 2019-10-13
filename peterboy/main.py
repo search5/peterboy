@@ -1,4 +1,5 @@
 import os
+from uuid import uuid4
 
 from flask import Flask, jsonify, request, render_template, url_for, redirect
 from flask.views import MethodView
@@ -9,18 +10,15 @@ from oauthlib.oauth1 import OAuth1Error
 
 from peterboy.database import db_session
 from peterboy.models import Client, TimestampNonce, TemporaryCredential, \
-    TokenCredential, User, PeterboyNote
+    TokenCredential, User, PeterboyNote, PeterboySyncServer, PeterboySync
 
 os.environ['AUTHLIB_INSECURE_TRANSPORT'] = 'true'
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
 query_client = create_query_client_func(db_session, Client)
-
-# server = AuthorizationServer()
 server = AuthorizationServer(app, query_client=query_client)
-# server.init_app(app, query_client=query_client)
-
+config_host = PeterboySyncServer.get_config('Host')
 
 register_authorization_hooks(
     server, db_session,
@@ -100,9 +98,9 @@ class UserAuthAPI(MethodView):
         # 단, URL의 일부로 받을 경우 /api/1.0은 개별 유저 공간에 포함되어야 하고 query param으로 받으면 그대로 루트 URL에 API가 속하게 됨
 
         resp = {
-            "oauth_request_token_url": "http://127.0.0.1:5002/oauth/request_token",
-            "oauth_authorize_url": "http://127.0.0.1:5002/oauth/authorize",
-            "oauth_access_token_url": "http://127.0.0.1:5002/oauth/access_token",
+            "oauth_request_token_url": "{}/oauth/request_token".format(config_host),
+            "oauth_authorize_url": "{}/oauth/authorize".format(config_host),
+            "oauth_access_token_url": "{}/oauth/access_token".format(config_host),
             "api-version": "1.0"
         }
 
@@ -113,8 +111,8 @@ class UserAuthAPI(MethodView):
                 return {}
 
             resp.update({"user-ref": {
-                "api-ref": "http://127.0.0.1:5002/api/1.0/{}".format(token_credential.user.username),
-                "href": "http://127.0.0.1:5002/{}".format(token_credential.user.username)
+                "api-ref": "{}/api/1.0/{}".format(config_host, token_credential.user.username),
+                "href": "{}/{}".format(config_host, token_credential.user.username)
             }})
 
         return jsonify(resp)
@@ -133,17 +131,22 @@ class UserDetailAPI(MethodView):
             if not token_credential:
                 return {}
 
-        return jsonify({
-            "user-name": user_id,
-            "first-name":user_id,
-            "last-name": user_id,
-            "notes-ref": {
-                "api-ref": "http://127.0.0.1:5002/api/1.0/{0}/notes".format(token_credential.user.username),
-                "href": "http://127.0.0.1:5002/{0}/notes".format(token_credential.user.username)
-            },
-            "latest-sync-revision": 1,
-            "current-sync-guid": "ff2e91b2-1234-4eab-3000-abcde49a7705"
-        })
+            latest_sync_revision = -1
+            sync_stat = PeterboySync.query.filter(PeterboySync.user_id == user_id).first()
+            if sync_stat:
+                latest_sync_revision = sync_stat.latest_sync_revision
+
+            return jsonify({
+                "user-name": user_id,
+                "first-name":user_id,
+                "last-name": user_id,
+                "notes-ref": {
+                    "api-ref": "{}/api/1.0/{0}/notes".format(config_host, token_credential.user.username),
+                    "href": "{}/{0}/notes".format(config_host, token_credential.user.username)
+                },
+                "latest-sync-revision": latest_sync_revision,
+                "current-sync-guid": "ff2e91b2-1234-4eab-3000-abcde49a7705"
+            })
 
 
 app.add_url_rule('/api/1.0/<user_id>', view_func=UserDetailAPI.as_view('user_detail'))
@@ -155,33 +158,33 @@ class UserNotesAPI(MethodView):
             token_credential = TokenCredential.query.filter(TokenCredential.oauth_token == authorization['oauth_token']).first()
             if not token_credential:
                 return {}
-        """
-        {
-            "guid": "002e91a2-2e34-4e2d-bf88-21def49a7705",
-            "title": "New Note 6",
-            "note-content": "Describe your note <b>here</b>.",
-            "note-content-version": 0.1,
-            "last-change-date": "2009-04-19T21:29:23.2197340-07:00",
-            "last-metadata-change-date": "2009-04-19T21:29:23.2197340-07:00",
-            "create-date": "2008-03-06T13:44:46.4342680-08:00",
-            "last-sync-revision": 57,
-            "open-on-startup": False,
-            "pinned": False,
-            "tags": ["tag1", "tag2", "tag3", "system:notebook:biology"]
-            
-            'guid', 'title', 'note-content', 'note-content-version', 'last-change-date', 'last-metadata-change-date', 'create-date', 'open-on-startup', 'pinned', 'tags', 'last-sync-revision'
-        }
-        """
+
         note_records = PeterboyNote.query
         notes = []
 
-        for record in note_records:
-            print(tuple(record.toTomboy().keys()))
-            notes.append(record.toTomboy())
+        include_notes = request.args.get('include_notes', 'false')
+        user_record = User.query.filter(User.id == user_id).first()
 
-        print(notes)
+        for record in note_records:
+            if include_notes == 'true':
+                notes.append(record.toTomboy())
+            else:
+                notes.append(dict(
+                    guid=record.guid,
+                    title=record.title,
+                    ref={
+                        "api-ref": "{}/api/1.0/{}/notes/{}".format(config_host, user_record.username, record.id),
+                        "href": "{}/{}/notes/{}".format(config_host, user_record.username, record.id)
+                    }
+                ))
+
+        latest_sync_revision = -1
+        sync_stat = PeterboySync.query.filter(PeterboySync.user_id == user_id).first()
+        if sync_stat:
+            latest_sync_revision = sync_stat.latest_sync_revision
+
         return jsonify({
-            "latest-sync-revision": 1,
+            "latest-sync-revision": latest_sync_revision,
             "notes": notes
         })
 
@@ -197,6 +200,7 @@ class UserNotesAPI(MethodView):
         for entry in note_changes:
             note = PeterboyNote()
             note.guid = entry['guid']
+            note.user_id = user_id
             note.title = entry['title']
             note.note_content = entry['note-content']
             note.note_content_version = entry['note-content-version']
@@ -209,29 +213,20 @@ class UserNotesAPI(MethodView):
 
             db_session.add(note)
 
+        # 싱크 리비전 저장
+        sync_stat = PeterboySync.query.filter(PeterboySync.user_id == user_id).first()
+        if not sync_stat:
+            sync_stat = PeterboySync()
+            sync_stat.user_id = user_id
+            db_session.add(sync_stat)
+
+        sync_stat.latest_sync_revision += 1
+        sync_stat.current_sync_guid = str(uuid4())
+
         db_session.commit()
-        """
-        {
-            'note-changes': [
-                {
-                    'guid': 'e346f347-9ad6-4068-8d2e-5c08a49c4da1',
-                    'title': '새 쪽지 5',
-                    'note-content': '새 쪽지를 적으십시오.',
-                    'note-content-version': 0.1,
-                    'last-change-date': '2019-04-24T19:07:26.7452790+09:00',
-                    'last-metadata-change-date': '2019-04-24T19:07:26.7452790+09:00',
-                    'create-date': '2019-04-24T19:07:26.7452790+09:00',
-                    'open-on-startup': False,
-                    'pinned': False,
-                    'tags': []
-                }
-            ],
-            'latest-sync-revision': 0
-        }
-        """
 
         return jsonify({
-            "latest-sync-revision": -1,
+            "latest-sync-revision": sync_stat.latest_sync_revision,
             "notes": note_changes
         })
 
