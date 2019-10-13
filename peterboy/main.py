@@ -9,7 +9,7 @@ from oauthlib.oauth1 import OAuth1Error
 
 from peterboy.database import db_session
 from peterboy.models import Client, TimestampNonce, TemporaryCredential, \
-    TokenCredential, User
+    TokenCredential, User, PeterboyNote
 
 os.environ['AUTHLIB_INSECURE_TRANSPORT'] = 'true'
 
@@ -89,7 +89,7 @@ def authorization2dict(header):
 
 
 @app.route("/<username>")
-def user_space():
+def user_space(username):
     return {}
 
 
@@ -141,7 +141,7 @@ class UserDetailAPI(MethodView):
                 "api-ref": "http://127.0.0.1:5002/api/1.0/{0}/notes".format(token_credential.user.username),
                 "href": "http://127.0.0.1:5002/{0}/notes".format(token_credential.user.username)
             },
-            "latest-sync-revision": -1,
+            "latest-sync-revision": 1,
             "current-sync-guid": "ff2e91b2-1234-4eab-3000-abcde49a7705"
         })
 
@@ -168,11 +168,21 @@ class UserNotesAPI(MethodView):
             "open-on-startup": False,
             "pinned": False,
             "tags": ["tag1", "tag2", "tag3", "system:notebook:biology"]
+            
+            'guid', 'title', 'note-content', 'note-content-version', 'last-change-date', 'last-metadata-change-date', 'create-date', 'open-on-startup', 'pinned', 'tags', 'last-sync-revision'
         }
         """
+        note_records = PeterboyNote.query
+        notes = []
+
+        for record in note_records:
+            print(tuple(record.toTomboy().keys()))
+            notes.append(record.toTomboy())
+
+        print(notes)
         return jsonify({
-            "latest-sync-revision": -1,
-            "notes": []
+            "latest-sync-revision": 1,
+            "notes": notes
         })
 
     def put(self, user_id):
@@ -182,7 +192,24 @@ class UserNotesAPI(MethodView):
             if not token_credential:
                 return {}
 
-        print(request.get_json())
+        note_changes = request.get_json()['note-changes']
+
+        for entry in note_changes:
+            note = PeterboyNote()
+            note.guid = entry['guid']
+            note.title = entry['title']
+            note.note_content = entry['note-content']
+            note.note_content_version = entry['note-content-version']
+            note.last_change_date = entry['last-change-date']
+            note.last_metadata_change_date = entry['last-metadata-change-date']
+            note.create_date = entry['create-date']
+            note.open_on_startup = entry['open-on-startup']
+            note.pinned = entry['pinned']
+            note.tags = entry['tags']
+
+            db_session.add(note)
+
+        db_session.commit()
         """
         {
             'note-changes': [
@@ -205,7 +232,7 @@ class UserNotesAPI(MethodView):
 
         return jsonify({
             "latest-sync-revision": -1,
-            "notes": []
+            "notes": note_changes
         })
 
 app.add_url_rule('/api/1.0/<user_id>/notes', view_func=UserNotesAPI.as_view('user_notes'))
