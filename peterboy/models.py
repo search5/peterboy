@@ -3,6 +3,7 @@ from uuid import uuid4
 from authlib.flask.oauth1.sqla import OAuth1ClientMixin, \
     OAuth1TemporaryCredentialMixin, OAuth1TokenCredentialMixin
 from sqlalchemy import Column, Integer, ForeignKey, String, Text, Float, DateTime, Boolean, JSON
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import relationship
 
 from peterboy.database import Base, db_session
@@ -67,7 +68,7 @@ class PeterboyNote(Base):
     last_change_date = Column(String(33), comment="노트 변경일")
     last_metadata_change_date = Column(String(33), comment='노트 정보 변경일')
     create_date = Column(String(33), comment='노트 생성일')
-    last_sync_revision = Column(Integer, comment='노트 싱크 리비전')
+    last_sync_revision = Column(Integer, default=1, comment='노트 싱크 리비전')
     open_on_startup = Column(Boolean, comment='톰보이 실행시 같이 보여줄지 여부')
     pinned = Column(Boolean, comment='노트 고정 여부')
     tags = Column(JSON, comment='태그')
@@ -126,8 +127,11 @@ class PeterboySyncServer(Base):
     config_value = Column(String(255), primary_key=True, comment='설정 값')
 
     @classmethod
-    def get_config(cls, key_name):
-        record = cls.query.filter(cls.config_key == key_name).first()
-        if record:
-            return record.config_value
-        return ''
+    def get_config(cls, key_name, default):
+        try:
+            record = cls.query.filter(cls.config_key == key_name).first()
+            if record:
+                return record.config_value
+            return default
+        except OperationalError:
+            return default

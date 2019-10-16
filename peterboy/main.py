@@ -18,7 +18,7 @@ app = Flask(__name__)
 app.url_map.strict_slashes = False
 query_client = create_query_client_func(db_session, Client)
 server = AuthorizationServer(app, query_client=query_client)
-config_host = PeterboySyncServer.get_config('Host')
+config_host = PeterboySyncServer.get_config('Host', '')
 
 register_authorization_hooks(
     server, db_session,
@@ -103,6 +103,8 @@ class UserAuthAPI(MethodView):
             "oauth_access_token_url": "{}/oauth/access_token".format(config_host),
             "api-version": "1.0"
         }
+
+        print(resp)
 
         if 'Authorization' in request.headers:
             authorization = authorization2dict(request.headers['Authorization'])
@@ -198,9 +200,29 @@ class UserNotesAPI(MethodView):
         note_changes = request.get_json()['note-changes']
 
         guid_list = map(lambda x: x['guid'], note_changes)
-        exists_notes = PeterboyNote.query.filter(PeterboyNote.guid.in_(guid_list))
+        exists_notes = PeterboyNote.query.filter(PeterboyNote.guid.in_(guid_list), PeterboyNote.user_id == user_id)
+        db_updated_guid = []
+
+        for exist_note in exists_notes:
+            db_updated_guid.append(exist_note['guid'])
+
+            entry = tuple(filter(lambda x: x['guid'] == exist_note['guid'], note_changes))[0]
+
+            exist_note.title = entry['title']
+            exist_note.note_content = entry['note-content']
+            exist_note.note_content_version = entry['note-content-version']
+            exist_note.last_change_date = entry['last-change-date']
+            exist_note.last_metadata_change_date = entry['last-metadata-change-date']
+            exist_note.create_date = entry['create-date']
+            exist_note.open_on_startup = entry['open-on-startup']
+            exist_note.pinned = entry['pinned']
+            exist_note.tags = entry['tags']
+            exist_note.last_sync_revision += 1
 
         for entry in note_changes:
+            if entry['guid'] in db_updated_guid:
+                continue
+
             note = PeterboyNote()
             note.guid = entry['guid']
             note.user_id = user_id
@@ -216,7 +238,7 @@ class UserNotesAPI(MethodView):
 
             db_session.add(note)
 
-        # 싱크 리비전 저장
+        # 마지막 싱크 리비전 저장
         latest_sync_revision = PeterboySync.commit_revision(user_id)
 
         db_session.commit()
@@ -240,8 +262,8 @@ app.add_url_rule('/api/1.0/<user_id>/notes', view_func=UserNotesAPI.as_view('use
         "last-change-date": "2009-04-19T21:29:23.2197340-07:00",
         "last-metadata-change-date": "2009-04-19T21:29:23.2197340-07:00",
         "create-date": "2008-03-06T13:44:46.4342680-08:00",
-        "open-on-startup": false,
-        "pinned": false,
+        "open-on-startup": False,
+        "pinned": False,
         "tags": ["tag1", "tag2", "tag3", "system:notebook:biology"]
     }]
 }

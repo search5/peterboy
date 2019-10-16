@@ -93,7 +93,7 @@ def peterboy_sync_config():
 
     config = PeterboySyncServer()
     config.config_key = 'Host'
-    config.config_value = 'http://locahost:5002'
+    config.config_value = 'http://localhost:5002'
 
     db_session.add(config)
     db_session.commit()
