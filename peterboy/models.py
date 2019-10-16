@@ -1,9 +1,11 @@
+from uuid import uuid4
+
 from authlib.flask.oauth1.sqla import OAuth1ClientMixin, \
     OAuth1TemporaryCredentialMixin, OAuth1TokenCredentialMixin
 from sqlalchemy import Column, Integer, ForeignKey, String, Text, Float, DateTime, Boolean, JSON
 from sqlalchemy.orm import relationship
 
-from peterboy.database import Base
+from peterboy.database import Base, db_session
 
 
 class User(Base):
@@ -93,6 +95,28 @@ class PeterboySync(Base):
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))
     latest_sync_revision = Column(Integer, default=0, comment='마지막 싱크 리비전')
     current_sync_guid = Column(String(36), comment='싱크 고유키')
+
+    @classmethod
+    def get_latest_revision(cls, user_id):
+        record = cls.query.filter(cls.user_id == user_id).first()
+        if not record:
+            return -1
+        else:
+            return record.latest_sync_revision
+
+    @classmethod
+    def commit_revision(cls, user_id):
+        record = cls.query.filter(cls.user_id == user_id).first()
+        if not record:
+            record = cls()
+            record.user_id = user_id
+
+            db_session.add(record)
+
+        record.latest_sync_revision += 1
+        record.current_sync_guid = str(uuid4())
+
+        return record.latest_sync_revision
 
 
 class PeterboySyncServer(Base):

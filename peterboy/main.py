@@ -81,7 +81,7 @@ def authorization2dict(header):
 
     for item in auth_header:
         first_equal = item.find("=")
-        resp[item[:first_equal]] = item[first_equal+1:][1:-1]
+        resp[item[:first_equal]] = item[first_equal + 1:][1:-1]
 
     return resp
 
@@ -106,7 +106,8 @@ class UserAuthAPI(MethodView):
 
         if 'Authorization' in request.headers:
             authorization = authorization2dict(request.headers['Authorization'])
-            token_credential = TokenCredential.query.filter(TokenCredential.oauth_token == authorization['oauth_token']).first()
+            token_credential = TokenCredential.query.filter(
+                TokenCredential.oauth_token == authorization['oauth_token']).first()
             if not token_credential:
                 return {}
 
@@ -123,26 +124,25 @@ class UserAuthAPI(MethodView):
 
 app.add_url_rule('/api/1.0', view_func=UserAuthAPI.as_view('user_auth'))
 
+
 class UserDetailAPI(MethodView):
     def get(self, user_id):
         if 'Authorization' in request.headers:
             authorization = authorization2dict(request.headers['Authorization'])
-            token_credential = TokenCredential.query.filter(TokenCredential.oauth_token == authorization['oauth_token']).first()
+            token_credential = TokenCredential.query.filter(
+                TokenCredential.oauth_token == authorization['oauth_token']).first()
             if not token_credential:
                 return {}
 
-            latest_sync_revision = -1
-            sync_stat = PeterboySync.query.filter(PeterboySync.user_id == user_id).first()
-            if sync_stat:
-                latest_sync_revision = sync_stat.latest_sync_revision
+            latest_sync_revision = PeterboySync.get_latest_revision(user_id)
 
             return jsonify({
                 "user-name": user_id,
-                "first-name":user_id,
+                "first-name": user_id,
                 "last-name": user_id,
                 "notes-ref": {
-                    "api-ref": "{}/api/1.0/{0}/notes".format(config_host, token_credential.user.username),
-                    "href": "{}/{0}/notes".format(config_host, token_credential.user.username)
+                    "api-ref": "{0}/api/1.0/{1}/notes".format(config_host, token_credential.user.username),
+                    "href": "{0}/{1}/notes".format(config_host, token_credential.user.username)
                 },
                 "latest-sync-revision": latest_sync_revision,
                 "current-sync-guid": "ff2e91b2-1234-4eab-3000-abcde49a7705"
@@ -151,11 +151,13 @@ class UserDetailAPI(MethodView):
 
 app.add_url_rule('/api/1.0/<user_id>', view_func=UserDetailAPI.as_view('user_detail'))
 
+
 class UserNotesAPI(MethodView):
     def get(self, user_id):
         if 'Authorization' in request.headers:
             authorization = authorization2dict(request.headers['Authorization'])
-            token_credential = TokenCredential.query.filter(TokenCredential.oauth_token == authorization['oauth_token']).first()
+            token_credential = TokenCredential.query.filter(
+                TokenCredential.oauth_token == authorization['oauth_token']).first()
             if not token_credential:
                 return {}
 
@@ -178,10 +180,7 @@ class UserNotesAPI(MethodView):
                     }
                 ))
 
-        latest_sync_revision = -1
-        sync_stat = PeterboySync.query.filter(PeterboySync.user_id == user_id).first()
-        if sync_stat:
-            latest_sync_revision = sync_stat.latest_sync_revision
+        latest_sync_revision = PeterboySync.get_latest_revision(user_id)
 
         return jsonify({
             "latest-sync-revision": latest_sync_revision,
@@ -191,11 +190,15 @@ class UserNotesAPI(MethodView):
     def put(self, user_id):
         if 'Authorization' in request.headers:
             authorization = authorization2dict(request.headers['Authorization'])
-            token_credential = TokenCredential.query.filter(TokenCredential.oauth_token == authorization['oauth_token']).first()
+            token_credential = TokenCredential.query.filter(
+                TokenCredential.oauth_token == authorization['oauth_token']).first()
             if not token_credential:
                 return {}
 
         note_changes = request.get_json()['note-changes']
+
+        guid_list = map(lambda x: x['guid'], note_changes)
+        exists_notes = PeterboyNote.query.filter(PeterboyNote.guid.in_(guid_list))
 
         for entry in note_changes:
             note = PeterboyNote()
@@ -214,21 +217,15 @@ class UserNotesAPI(MethodView):
             db_session.add(note)
 
         # 싱크 리비전 저장
-        sync_stat = PeterboySync.query.filter(PeterboySync.user_id == user_id).first()
-        if not sync_stat:
-            sync_stat = PeterboySync()
-            sync_stat.user_id = user_id
-            db_session.add(sync_stat)
-
-        sync_stat.latest_sync_revision += 1
-        sync_stat.current_sync_guid = str(uuid4())
+        latest_sync_revision = PeterboySync.commit_revision(user_id)
 
         db_session.commit()
 
         return jsonify({
-            "latest-sync-revision": sync_stat.latest_sync_revision,
+            "latest-sync-revision": latest_sync_revision,
             "notes": note_changes
         })
+
 
 app.add_url_rule('/api/1.0/<user_id>/notes', view_func=UserNotesAPI.as_view('user_notes'))
 
