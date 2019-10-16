@@ -104,8 +104,6 @@ class UserAuthAPI(MethodView):
             "api-version": "1.0"
         }
 
-        print(resp)
-
         if 'Authorization' in request.headers:
             authorization = authorization2dict(request.headers['Authorization'])
             token_credential = TokenCredential.query.filter(
@@ -167,7 +165,8 @@ class UserNotesAPI(MethodView):
         notes = []
 
         include_notes = request.args.get('include_notes', 'false')
-        user_record = User.query.filter(User.id == user_id).first()
+
+        user_record = User.query.filter(User.username == user_id).first()
 
         for record in note_records:
             if include_notes == 'true':
@@ -204,9 +203,9 @@ class UserNotesAPI(MethodView):
         db_updated_guid = []
 
         for exist_note in exists_notes:
-            db_updated_guid.append(exist_note['guid'])
+            db_updated_guid.append(exist_note.guid)
 
-            entry = tuple(filter(lambda x: x['guid'] == exist_note['guid'], note_changes))[0]
+            entry = tuple(filter(lambda x: x['guid'] == exist_note.guid, note_changes))[0]
 
             exist_note.title = entry['title']
             exist_note.note_content = entry['note-content']

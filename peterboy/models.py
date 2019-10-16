@@ -111,6 +111,7 @@ class PeterboySync(Base):
         if not record:
             record = cls()
             record.user_id = user_id
+            record.latest_sync_revision = 0
 
             db_session.add(record)
 
