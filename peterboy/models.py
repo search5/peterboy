@@ -3,7 +3,7 @@ from uuid import uuid4
 from authlib.flask.oauth1.sqla import OAuth1ClientMixin, \
     OAuth1TemporaryCredentialMixin, OAuth1TokenCredentialMixin
 from sqlalchemy import Column, Integer, ForeignKey, String, Text, Float, DateTime, Boolean, JSON
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import relationship
 
 from peterboy.database import Base, db_session
@@ -134,5 +134,5 @@ class PeterboySyncServer(Base):
             if record:
                 return record.config_value
             return default
-        except OperationalError:
+        except (OperationalError, ProgrammingError):
             return default
