@@ -14,6 +14,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     username = Column(String(100), comment='사용자 ID')
+    current_sync_guid = Column(String(36), comment='싱크 고유키', doc='변경시 모든 노트 지워야 함')
 
     def get_user_id(self):
         return self.id
@@ -95,7 +96,6 @@ class PeterboySync(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))
     latest_sync_revision = Column(Integer, default=0, comment='마지막 싱크 리비전')
-    current_sync_guid = Column(String(36), comment='싱크 고유키')
 
     @classmethod
     def get_latest_revision(cls, user_id):
@@ -103,7 +103,7 @@ class PeterboySync(Base):
         if not record:
             return -1
         else:
-            return record
+            return record.latest_sync_revision
 
     @classmethod
     def commit_revision(cls, user_id):
@@ -116,7 +116,6 @@ class PeterboySync(Base):
             db_session.add(record)
 
         record.latest_sync_revision += 1
-        record.current_sync_guid = str(uuid4())
 
         return record.latest_sync_revision
 

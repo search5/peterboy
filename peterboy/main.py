@@ -62,6 +62,7 @@ def authorize():
     granted = request.form.get('granted')
     if granted:
         grant_user = User.query.get(int(granted))
+        grant_user.current_sync_guid = str(uuid4())
     else:
         grant_user = None
 
@@ -142,7 +143,7 @@ class UserDetailAPI(MethodView):
 
             user_record = User.query.filter(User.username == user_id).first()
 
-            sync_info = PeterboySync.get_latest_revision(user_record.id)
+            latest_sync_revision = PeterboySync.get_latest_revision(user_record.id)
 
             return jsonify({
                 "user-name": user_id,
@@ -152,8 +153,8 @@ class UserDetailAPI(MethodView):
                     "api-ref": "{0}/api/1.0/{1}/notes".format(config_host, token_credential.user.username),
                     "href": "{0}/{1}/notes".format(config_host, token_credential.user.username)
                 },
-                "latest-sync-revision": sync_info.latest_sync_revision,
-                "current-sync-guid": str(uuid4())
+                "latest-sync-revision": latest_sync_revision,
+                "current-sync-guid": user_record.current_sync_guid
             })
 
 
@@ -169,12 +170,18 @@ class UserNotesAPI(MethodView):
             if not token_credential:
                 return {}
 
+        user_record = User.query.filter(User.username == user_id).first()
+        latest_sync_revision = PeterboySync.get_latest_revision(user_record.id)
+
+        since = request.args.get('since', 0, type=int)
+
         note_records = PeterboyNote.query
+        if 'since' in request.args:
+            note_records = note_records.filter(PeterboyNote.last_sync_revision > since)
+
         notes = []
 
         include_notes = request.args.get('include_notes', default=False, type=bool)
-
-        user_record = User.query.filter(User.username == user_id).first()
 
         for record in note_records:
             if include_notes:
@@ -189,10 +196,8 @@ class UserNotesAPI(MethodView):
                     }
                 ))
 
-        sync_info = PeterboySync.get_latest_revision(user_record.id)
-
         return jsonify({
-            "latest-sync-revision": sync_info.latest_sync_revision,
+            "latest-sync-revision": latest_sync_revision,
             "notes": notes
         })
 
@@ -212,10 +217,25 @@ class UserNotesAPI(MethodView):
         exists_notes = PeterboyNote.query.filter(PeterboyNote.guid.in_(guid_list), PeterboyNote.user_id == user_record.id)
         db_updated_guid = [exist_note.guid for exist_note in exists_notes]
 
-        sync_updated = False
+        latest_sync_revision = PeterboySync.get_latest_revision(user_record.id)
+
+        new_sync_rev = latest_sync_revision + 1
+
+        if 'latest-sync-revision' in request.get_json():
+            new_sync_rev = request.get_json()['latest-sync-revision']
+
+        if new_sync_rev != latest_sync_revision + 1:
+            # TODO: Return a more useful error response?
+            return abort(500)
 
         for exist_note in exists_notes:
             entry = tuple(filter(lambda x: x['guid'] == exist_note.guid, note_changes))[0]
+
+            if ('command' in entry) and entry['command'] == 'delete':
+                # TODO 2019/10/18일 톰보이 프로그램 버그로 보이는데 삭제되서 command가
+                # 와야 하는데 안와서 일단 코드만 남겨둠.
+                db_session.delete(exist_note)
+                continue
 
             # 노트 버전이 동일하면 업데이트 하지 않는다
             if exist_note.note_content_version == entry['note-content-version']:
@@ -230,15 +250,9 @@ class UserNotesAPI(MethodView):
             exist_note.open_on_startup = entry['open-on-startup']
             exist_note.pinned = entry['pinned']
             exist_note.tags = entry['tags']
-            exist_note.last_sync_revision += 1
-
-            sync_updated = True
-
-        print(db_updated_guid)
+            exist_note.last_sync_revision = new_sync_rev
 
         for entry in note_changes:
-            print(entry['guid'])
-            print(entry['guid'] in db_updated_guid)
             if entry['guid'] in db_updated_guid:
                 continue
 
@@ -250,6 +264,7 @@ class UserNotesAPI(MethodView):
             note.note_content_version = entry['note-content-version']
             note.last_change_date = entry['last-change-date']
             note.last_metadata_change_date = entry['last-metadata-change-date']
+            note.last_sync_revision = new_sync_rev
             note.create_date = entry['create-date']
             note.open_on_startup = entry['open-on-startup']
             note.pinned = entry['pinned']
@@ -257,20 +272,31 @@ class UserNotesAPI(MethodView):
 
             db_session.add(note)
 
-            sync_updated = True
 
         # 마지막 싱크 리비전 저장
-
-        sync_info = PeterboySync.get_latest_revision(user_record.id)
-        latest_sync_revision = sync_info.latest_sync_revision
-        if sync_updated:
-            latest_sync_revision = PeterboySync.commit_revision(user_record.id)
+        latest_sync_revision = PeterboySync.commit_revision(user_record.id)
 
         db_session.commit()
 
+        # 업데이트된 정보만 내려가도록 변경
+        note_records = PeterboyNote.query
+        notes = []
+
+        user_record = User.query.filter(User.username == user_id).first()
+
+        for record in note_records:
+            notes.append(dict(
+                guid=record.guid,
+                title=record.title,
+                ref={
+                    "api-ref": "{}/api/1.0/{}/notes/{}".format(config_host, user_record.username, record.id),
+                    "href": "{}/{}/notes/{}".format(config_host, user_record.username, record.id)
+                }
+            ))
+
         return jsonify({
             "latest-sync-revision": latest_sync_revision,
-            "notes": note_changes
+            "notes": notes
         })
 
 
