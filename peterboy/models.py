@@ -74,8 +74,8 @@ class PeterboyNote(Base):
     pinned = Column(Boolean, comment='노트 고정 여부')
     tags = Column(JSON, comment='태그')
 
-    def toTomboy(self):
-        return {
+    def toTomboy(self, hidden_last_sync_revision=False):
+        resp = {
             'guid': self.guid,
             'title': self.title,
             'note-content': self.note_content,
@@ -88,6 +88,11 @@ class PeterboyNote(Base):
             'tags': self.tags,
             'last-sync-revision': self.last_sync_revision
         }
+
+        if hidden_last_sync_revision:
+            del resp['last-sync-revision']
+
+        return resp
 
 
 class PeterboySync(Base):

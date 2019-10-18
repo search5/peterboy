@@ -1,4 +1,5 @@
 import os
+from functools import wraps
 from uuid import uuid4
 
 from flask import Flask, jsonify, request, render_template, url_for, redirect, \
@@ -98,29 +99,39 @@ def favicon_ico():
     return abort(404)
 
 
+def authorize_check(f):
+    @wraps(f)
+    def check(*args, **kwargs):
+        if 'Authorization' in request.headers:
+            authorization = authorization2dict(request.headers['Authorization'])
+            token_credential = TokenCredential.query.filter(
+                TokenCredential.oauth_token == authorization['oauth_token']).first()
+
+            kwargs['token_user'] = token_credential.user if token_credential else None
+
+            return f(*args, **kwargs)
+    return check
+
+
 class UserAuthAPI(MethodView):
-    def get(self):
+    decorators = [authorize_check]
+
+    def get(self, token_user=None):
         # 톰보이가 서버 연결 요청 버튼을 누르면 여기로 요청된다.
         # 여기에서 아이디를 받아 ID별로 사용자 구분(URL의 일부로 받을지 아니면 query param으로 받을건지 고민은 해봐야 함)
         # 단, URL의 일부로 받을 경우 /api/1.0은 개별 유저 공간에 포함되어야 하고 query param으로 받으면 그대로 루트 URL에 API가 속하게 됨
 
         resp = {
-            "oauth_request_token_url": "{}/oauth/request_token".format(config_host),
-            "oauth_authorize_url": "{}/oauth/authorize".format(config_host),
-            "oauth_access_token_url": "{}/oauth/access_token".format(config_host),
+            "oauth_request_token_url": url_for('initiate_temporary_credential', _external=True),
+            "oauth_authorize_url": url_for('authorize', _external=True),
+            "oauth_access_token_url": url_for('issue_token', _external=True),
             "api-version": "1.0"
         }
 
-        if 'Authorization' in request.headers:
-            authorization = authorization2dict(request.headers['Authorization'])
-            token_credential = TokenCredential.query.filter(
-                TokenCredential.oauth_token == authorization['oauth_token']).first()
-            if not token_credential:
-                return {}
-
+        if token_user:
             resp.update({"user-ref": {
-                "api-ref": "{}/api/1.0/{}".format(config_host, token_credential.user.username),
-                "href": "{}/{}".format(config_host, token_credential.user.username)
+                "api-ref": url_for('user_detail', username=token_user.username, _external=True),
+                "href": "{}/{}".format(config_host, token_user.username)
             }})
 
         return jsonify(resp)
@@ -133,45 +144,32 @@ app.add_url_rule('/api/1.0', view_func=UserAuthAPI.as_view('user_auth'))
 
 
 class UserDetailAPI(MethodView):
-    def get(self, user_id):
-        if 'Authorization' in request.headers:
-            authorization = authorization2dict(request.headers['Authorization'])
-            token_credential = TokenCredential.query.filter(
-                TokenCredential.oauth_token == authorization['oauth_token']).first()
-            if not token_credential:
-                return {}
+    decorators = [authorize_check]
 
-            user_record = User.query.filter(User.username == user_id).first()
+    def get(self, username, token_user=None):
+        latest_sync_revision = PeterboySync.get_latest_revision(token_user.id)
 
-            latest_sync_revision = PeterboySync.get_latest_revision(user_record.id)
-
-            return jsonify({
-                "user-name": user_id,
-                "first-name": user_id,
-                "last-name": user_id,
-                "notes-ref": {
-                    "api-ref": "{0}/api/1.0/{1}/notes".format(config_host, token_credential.user.username),
-                    "href": "{0}/{1}/notes".format(config_host, token_credential.user.username)
-                },
-                "latest-sync-revision": latest_sync_revision,
-                "current-sync-guid": user_record.current_sync_guid
-            })
+        return jsonify({
+            "user-name": username,
+            "first-name": username,
+            "last-name": username,
+            "notes-ref": {
+                "api-ref": url_for('user_notes', username=username, _external=True),
+                "href": "{0}/{1}/notes".format(config_host, username)
+            },
+            "latest-sync-revision": latest_sync_revision,
+            "current-sync-guid": token_user.current_sync_guid
+        })
 
 
-app.add_url_rule('/api/1.0/<user_id>', view_func=UserDetailAPI.as_view('user_detail'))
+app.add_url_rule('/api/1.0/<username>', view_func=UserDetailAPI.as_view('user_detail'))
 
 
 class UserNotesAPI(MethodView):
-    def get(self, user_id):
-        if 'Authorization' in request.headers:
-            authorization = authorization2dict(request.headers['Authorization'])
-            token_credential = TokenCredential.query.filter(
-                TokenCredential.oauth_token == authorization['oauth_token']).first()
-            if not token_credential:
-                return {}
+    decorators = [authorize_check]
 
-        user_record = User.query.filter(User.username == user_id).first()
-        latest_sync_revision = PeterboySync.get_latest_revision(user_record.id)
+    def get(self, username, token_user=None):
+        latest_sync_revision = PeterboySync.get_latest_revision(token_user.id)
 
         since = request.args.get('since', 0, type=int)
 
@@ -191,8 +189,8 @@ class UserNotesAPI(MethodView):
                     guid=record.guid,
                     title=record.title,
                     ref={
-                        "api-ref": "{}/api/1.0/{}/notes/{}".format(config_host, user_record.username, record.id),
-                        "href": "{}/{}/notes/{}".format(config_host, user_record.username, record.id)
+                        "api-ref": url_for('user_note', username=username, note_id=record.id, _external=True),
+                        "href": "{}/{}/notes/{}".format(config_host, username, record.id)
                     }
                 ))
 
@@ -201,23 +199,16 @@ class UserNotesAPI(MethodView):
             "notes": notes
         })
 
-    def put(self, user_id):
-        if 'Authorization' in request.headers:
-            authorization = authorization2dict(request.headers['Authorization'])
-            token_credential = TokenCredential.query.filter(
-                TokenCredential.oauth_token == authorization['oauth_token']).first()
-            if not token_credential:
-                return {}
-
-        user_record = User.query.filter(User.username == user_id).first()
-
+    def put(self, username, token_user=None):
         note_changes = request.get_json()['note-changes']
 
         guid_list = map(lambda x: x['guid'], note_changes)
-        exists_notes = PeterboyNote.query.filter(PeterboyNote.guid.in_(guid_list), PeterboyNote.user_id == user_record.id)
+        exists_notes = PeterboyNote.query.filter(
+            PeterboyNote.guid.in_(guid_list),
+            PeterboyNote.user_id == token_user.id)
         db_updated_guid = [exist_note.guid for exist_note in exists_notes]
 
-        latest_sync_revision = PeterboySync.get_latest_revision(user_record.id)
+        latest_sync_revision = PeterboySync.get_latest_revision(token_user.id)
 
         new_sync_rev = latest_sync_revision + 1
 
@@ -229,7 +220,8 @@ class UserNotesAPI(MethodView):
             return abort(500)
 
         for exist_note in exists_notes:
-            entry = tuple(filter(lambda x: x['guid'] == exist_note.guid, note_changes))[0]
+            entry = filter(lambda x: x['guid'] == exist_note.guid, note_changes)
+            entry = tuple(entry)[0]
 
             if ('command' in entry) and entry['command'] == 'delete':
                 # TODO 2019/10/18일 톰보이 프로그램 버그로 보이는데 삭제되서 command가
@@ -258,7 +250,7 @@ class UserNotesAPI(MethodView):
 
             note = PeterboyNote()
             note.guid = entry['guid']
-            note.user_id = user_record.id
+            note.user_id = token_user.id
             note.title = entry['title']
             note.note_content = entry['note-content']
             note.note_content_version = entry['note-content-version']
@@ -272,9 +264,8 @@ class UserNotesAPI(MethodView):
 
             db_session.add(note)
 
-
         # 마지막 싱크 리비전 저장
-        latest_sync_revision = PeterboySync.commit_revision(user_record.id)
+        latest_sync_revision = PeterboySync.commit_revision(token_user.id)
 
         db_session.commit()
 
@@ -282,15 +273,13 @@ class UserNotesAPI(MethodView):
         note_records = PeterboyNote.query
         notes = []
 
-        user_record = User.query.filter(User.username == user_id).first()
-
         for record in note_records:
             notes.append(dict(
                 guid=record.guid,
                 title=record.title,
                 ref={
-                    "api-ref": "{}/api/1.0/{}/notes/{}".format(config_host, user_record.username, record.id),
-                    "href": "{}/{}/notes/{}".format(config_host, user_record.username, record.id)
+                    "api-ref": url_for('user_note', username=username, note_id=record.id, _external=True),
+                    "href": "{}/{}/notes/{}".format(config_host, username, record.id)
                 }
             ))
 
@@ -300,22 +289,19 @@ class UserNotesAPI(MethodView):
         })
 
 
-app.add_url_rule('/api/1.0/<user_id>/notes', view_func=UserNotesAPI.as_view('user_notes'))
+app.add_url_rule('/api/1.0/<username>/notes', view_func=UserNotesAPI.as_view('user_notes'))
 
-# http://domain/api/1.0/user/notes/id
-"""
-{
-    "note": [{
-        "guid": "002e91a2-2e34-4e2d-bf88-21def49a7705",
-        "title": "New Note 6",
-        "note-content": "Describe your note <b>here</b>.",
-        "note-content-version": 0.1,
-        "last-change-date": "2009-04-19T21:29:23.2197340-07:00",
-        "last-metadata-change-date": "2009-04-19T21:29:23.2197340-07:00",
-        "create-date": "2008-03-06T13:44:46.4342680-08:00",
-        "open-on-startup": False,
-        "pinned": False,
-        "tags": ["tag1", "tag2", "tag3", "system:notebook:biology"]
-    }]
-}
-"""
+
+class UserNoteAPI(MethodView):
+    decorators = [authorize_check]
+
+    def get(self, username, note_id, token_user=None):
+        note = PeterboyNote.query.filter(
+            PeterboyNote.user_id == token_user.id,
+            PeterboyNote.id == note_id).first()
+
+        return jsonify({"note": [note.toTomboy(
+            hidden_last_sync_revision=True)]})
+
+
+app.add_url_rule('/api/1.0/<username>/notes/<note_id>', view_func=UserNoteAPI.as_view('user_note'))
