@@ -153,7 +153,7 @@ class UserDetailAPI(MethodView):
                     "href": "{0}/{1}/notes".format(config_host, token_credential.user.username)
                 },
                 "latest-sync-revision": sync_info.latest_sync_revision,
-                "current-sync-guid": sync_info.current_sync_guid
+                "current-sync-guid": str(uuid4())
             })
 
 
