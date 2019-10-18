@@ -1,7 +1,8 @@
 import os
 from uuid import uuid4
 
-from flask import Flask, jsonify, request, render_template, url_for, redirect
+from flask import Flask, jsonify, request, render_template, url_for, redirect, \
+    abort
 from flask.views import MethodView
 from authlib.flask.oauth1 import AuthorizationServer, current_credential
 from authlib.flask.oauth1.sqla import create_query_client_func, \
@@ -91,6 +92,11 @@ def user_space(username):
     return {}
 
 
+@app.route("/favicon.ico")
+def favicon_ico():
+    return abort(404)
+
+
 class UserAuthAPI(MethodView):
     def get(self):
         # 톰보이가 서버 연결 요청 버튼을 누르면 여기로 요청된다.
@@ -134,7 +140,9 @@ class UserDetailAPI(MethodView):
             if not token_credential:
                 return {}
 
-            latest_sync_revision = PeterboySync.get_latest_revision(user_id)
+            user_record = User.query.filter(User.username == user_id).first()
+
+            sync_info = PeterboySync.get_latest_revision(user_record.id)
 
             return jsonify({
                 "user-name": user_id,
@@ -144,8 +152,8 @@ class UserDetailAPI(MethodView):
                     "api-ref": "{0}/api/1.0/{1}/notes".format(config_host, token_credential.user.username),
                     "href": "{0}/{1}/notes".format(config_host, token_credential.user.username)
                 },
-                "latest-sync-revision": latest_sync_revision,
-                "current-sync-guid": "ff2e91b2-1234-4eab-3000-abcde49a7705"
+                "latest-sync-revision": sync_info.latest_sync_revision,
+                "current-sync-guid": sync_info.current_sync_guid
             })
 
 
@@ -164,12 +172,12 @@ class UserNotesAPI(MethodView):
         note_records = PeterboyNote.query
         notes = []
 
-        include_notes = request.args.get('include_notes', 'false')
+        include_notes = request.args.get('include_notes', default=False, type=bool)
 
         user_record = User.query.filter(User.username == user_id).first()
 
         for record in note_records:
-            if include_notes == 'true':
+            if include_notes:
                 notes.append(record.toTomboy())
             else:
                 notes.append(dict(
@@ -181,10 +189,10 @@ class UserNotesAPI(MethodView):
                     }
                 ))
 
-        latest_sync_revision = PeterboySync.get_latest_revision(user_id)
+        sync_info = PeterboySync.get_latest_revision(user_record.id)
 
         return jsonify({
-            "latest-sync-revision": latest_sync_revision,
+            "latest-sync-revision": sync_info.latest_sync_revision,
             "notes": notes
         })
 
@@ -196,16 +204,22 @@ class UserNotesAPI(MethodView):
             if not token_credential:
                 return {}
 
+        user_record = User.query.filter(User.username == user_id).first()
+
         note_changes = request.get_json()['note-changes']
 
         guid_list = map(lambda x: x['guid'], note_changes)
-        exists_notes = PeterboyNote.query.filter(PeterboyNote.guid.in_(guid_list), PeterboyNote.user_id == user_id)
-        db_updated_guid = []
+        exists_notes = PeterboyNote.query.filter(PeterboyNote.guid.in_(guid_list), PeterboyNote.user_id == user_record.id)
+        db_updated_guid = [exist_note.guid for exist_note in exists_notes]
+
+        sync_updated = False
 
         for exist_note in exists_notes:
-            db_updated_guid.append(exist_note.guid)
-
             entry = tuple(filter(lambda x: x['guid'] == exist_note.guid, note_changes))[0]
+
+            # 노트 버전이 동일하면 업데이트 하지 않는다
+            if exist_note.note_content_version == entry['note-content-version']:
+                continue
 
             exist_note.title = entry['title']
             exist_note.note_content = entry['note-content']
@@ -218,13 +232,19 @@ class UserNotesAPI(MethodView):
             exist_note.tags = entry['tags']
             exist_note.last_sync_revision += 1
 
+            sync_updated = True
+
+        print(db_updated_guid)
+
         for entry in note_changes:
+            print(entry['guid'])
+            print(entry['guid'] in db_updated_guid)
             if entry['guid'] in db_updated_guid:
                 continue
 
             note = PeterboyNote()
             note.guid = entry['guid']
-            note.user_id = user_id
+            note.user_id = user_record.id
             note.title = entry['title']
             note.note_content = entry['note-content']
             note.note_content_version = entry['note-content-version']
@@ -237,8 +257,14 @@ class UserNotesAPI(MethodView):
 
             db_session.add(note)
 
+            sync_updated = True
+
         # 마지막 싱크 리비전 저장
-        latest_sync_revision = PeterboySync.commit_revision(user_id)
+
+        sync_info = PeterboySync.get_latest_revision(user_record.id)
+        latest_sync_revision = sync_info.latest_sync_revision
+        if sync_updated:
+            latest_sync_revision = PeterboySync.commit_revision(user_record.id)
 
         db_session.commit()
 

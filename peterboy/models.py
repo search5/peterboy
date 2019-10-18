@@ -103,7 +103,7 @@ class PeterboySync(Base):
         if not record:
             return -1
         else:
-            return record.latest_sync_revision
+            return record
 
     @classmethod
     def commit_revision(cls, user_id):

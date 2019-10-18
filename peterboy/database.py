@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-engine_url = 'postgresql+psycopg2://khmkgpxb:c35WjFSUESGOS5hexnfxetxwVL5gZ_X4@arjuna.db.elephantsql.com:5432/khmkgpxb'
+engine_url = 'postgresql+psycopg2://peterboy:peterboy@localhost:5432/peterboy'
 
 engine = create_engine(engine_url, convert_unicode=True)
 db_session = scoped_session(sessionmaker(autocommit=False,
