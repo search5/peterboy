@@ -8,6 +8,7 @@ from flask.views import MethodView
 from authlib.flask.oauth1 import AuthorizationServer, current_credential
 from authlib.flask.oauth1.sqla import create_query_client_func, \
     register_authorization_hooks
+from flask_login import LoginManager
 from oauthlib.oauth1 import OAuth1Error
 
 from peterboy.database import db_session
@@ -16,11 +17,14 @@ from peterboy.models import Client, TimestampNonce, TemporaryCredential, \
 
 os.environ['AUTHLIB_INSECURE_TRANSPORT'] = 'true'
 
+query_client = create_query_client_func(db_session, Client)
+config_host = PeterboySyncServer.get_config('Host', '')
+
 app = Flask(__name__)
 app.url_map.strict_slashes = False
-query_client = create_query_client_func(db_session, Client)
 server = AuthorizationServer(app, query_client=query_client)
-config_host = PeterboySyncServer.get_config('Host', '')
+login_manager = LoginManager(app)
+login_manager.session_protection = "strong"
 
 register_authorization_hooks(
     server, db_session,
@@ -112,14 +116,9 @@ def authorization2dict(header):
     return resp
 
 
-@app.route("/<username>")
-def user_space(username):
-    return {}
-
-
-@app.route("/favicon.ico")
-def favicon_ico():
-    return abort(404)
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get(user_id)
 
 
 def authorize_check(error=True):
@@ -141,6 +140,16 @@ def authorize_check(error=True):
             return f(*args, **kwargs)
         return check
     return authorize_inner
+
+
+@app.route("/<username>")
+def user_space(username):
+    return {}
+
+
+@app.route("/favicon.ico")
+def favicon_ico():
+    return abort(404)
 
 
 class UserAuthAPI(MethodView):

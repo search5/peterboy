@@ -4,3 +4,4 @@ sqlalchemy
 gunicorn
 authlib
 python-slugify
+flask-login

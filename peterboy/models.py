@@ -4,6 +4,7 @@ from authlib.flask.oauth1.sqla import OAuth1ClientMixin, \
     OAuth1TemporaryCredentialMixin, OAuth1TokenCredentialMixin
 from sqlalchemy import Column, Integer, ForeignKey, String, Text, Float, DateTime, Boolean, JSON, CHAR, func
 from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 
 from peterboy.database import Base, db_session
@@ -23,6 +24,21 @@ class User(Base):
 
     def get_user_id(self):
         return self.id
+
+    @hybrid_property
+    def is_active(self):
+        return True
+
+    @hybrid_property
+    def is_authenticated(self):
+        return True
+
+    def get_id(self):
+        return self.username
+
+    @hybrid_property
+    def is_anonymous(self):
+        return False
 
 
 class Client(Base, OAuth1ClientMixin):
