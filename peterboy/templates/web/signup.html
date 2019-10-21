@@ -162,7 +162,12 @@
              return
          }
 
-         axios.post("{{ url_for('signup') }}", {}).then(function () {
+         axios.post("{{ url_for('signup') }}", {
+             user_id: this.user_id,
+             user_email: this.user_email,
+             user_name: this.user_name,
+             user_password: this.user_password
+         }).then(function () {
              alert("사용자 등록이 완료되었습니다")
          })
       }

@@ -40,9 +40,24 @@ class UserSignUp(MethodView):
         return render_template('web/signup.html')
 
     def post(self):
-        print("POST 요청")
-        # 여기에서 사용자를 생성한다.
-        return ""
+        req_json = request.get_json()
+
+        user = User(username=req_json.get('user_id'),
+                    user_mail=req_json.get('user_email'),
+                    name=req_json.get('user_name'),
+                    userpw=req_json.get('user_password'))
+        db_session.add(user)
+        db_session.flush()
+
+        client = Client(
+            user_id=user.id,
+            client_id='anyone',
+            client_secret='anyone',
+            default_redirect_uri='oob',
+        )
+        db_session.add(client)
+
+        return jsonify(success=True)
 
 
 app.add_url_rule('/signup', view_func=UserSignUp.as_view('signup'))
