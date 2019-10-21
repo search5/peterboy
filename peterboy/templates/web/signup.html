@@ -1,7 +1,8 @@
 {% extends "web/base.html" %}
 
 {% block script %}
-  <script src="//unpkg.com/vue"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.min.js"></script>
 {% endblock %}
 
 {% block css %}
@@ -121,7 +122,7 @@
         <div class="line"></div>
       </div>
     </label>
-    <button type="submit">회원가입</button>
+    <button @click="submit">회원가입</button>
   </form>
 
   <script>
@@ -139,10 +140,35 @@
       },
       input_blur: function (e) {
         e.path[1].children[0].classList.remove('label-active')
+      },
+      submit: function () {
+         if (this.user_id === "") {
+             alert('사용할 아이디를 입력해주세요')
+             return
+         }
+
+         if (this.user_email === "") {
+             alert('이메일 주소를 입력해주세요')
+             return
+         }
+
+         if (this.user_name === "") {
+             alert("이름을 입력해주세요")
+             return
+         }
+
+         if (this.user_password === "") {
+             alert("비밀번호를 입력해주세요")
+             return
+         }
+
+         axios.post("{{ url_for('signup') }}", {}).then(function () {
+             alert("사용자 등록이 완료되었습니다")
+         })
       }
     },
     created: function () {
-      console.log("잘 되었엄!")
+
     }
   })
   </script>

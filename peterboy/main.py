@@ -35,9 +35,17 @@ def main():
     return render_template('web/index.html')
 
 
-@app.route('/signup')
-def signup():
-    return render_template('web/signup.html')
+class UserSignUp(MethodView):
+    def get(self):
+        return render_template('web/signup.html')
+
+    def post(self):
+        print("POST 요청")
+        # 여기에서 사용자를 생성한다.
+        return ""
+
+
+app.add_url_rule('/signup', view_func=UserSignUp.as_view('signup'))
 
 
 @app.route('/signin')
@@ -99,22 +107,29 @@ def favicon_ico():
     return abort(404)
 
 
-def authorize_check(f):
-    @wraps(f)
-    def check(*args, **kwargs):
-        if 'Authorization' in request.headers:
-            authorization = authorization2dict(request.headers['Authorization'])
-            token_credential = TokenCredential.query.filter(
-                TokenCredential.oauth_token == authorization['oauth_token']).first()
+def authorize_check(error=True):
+    def authorize_inner(f):
+        @wraps(f)
+        def check(*args, **kwargs):
+            token_credential = None
+
+            if 'Authorization' in request.headers:
+                authorization = authorization2dict(request.headers['Authorization'])
+                token_credential = TokenCredential.query.filter(
+                    TokenCredential.oauth_token == authorization['oauth_token']).first()
 
             kwargs['token_user'] = token_credential.user if token_credential else None
 
+            if error:
+                abort(500)
+
             return f(*args, **kwargs)
-    return check
+        return check
+    return authorize_inner
 
 
 class UserAuthAPI(MethodView):
-    decorators = [authorize_check]
+    decorators = [authorize_check(False)]
 
     def get(self, token_user=None):
         # 톰보이가 서버 연결 요청 버튼을 누르면 여기로 요청된다.
@@ -138,6 +153,7 @@ class UserAuthAPI(MethodView):
 
     def post(self):
         print("POST 요청")
+        return ""
 
 
 app.add_url_rule('/api/1.0', view_func=UserAuthAPI.as_view('user_auth'))

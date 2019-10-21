@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from authlib.flask.oauth1.sqla import OAuth1ClientMixin, \
     OAuth1TemporaryCredentialMixin, OAuth1TokenCredentialMixin
-from sqlalchemy import Column, Integer, ForeignKey, String, Text, Float, DateTime, Boolean, JSON
+from sqlalchemy import Column, Integer, ForeignKey, String, Text, Float, DateTime, Boolean, JSON, CHAR, func
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import relationship
 
@@ -15,6 +15,11 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(100), comment='사용자 ID')
     current_sync_guid = Column(String(36), comment='싱크 고유키', doc='변경시 모든 노트 지워야 함')
+    user_mail = Column(String(200), comment='이메일 주소')
+    name = Column(String(100), comment='사용자 이름')
+    userpw = Column(String(100), comment='사용자 비밀번호')
+    persistent_del_yn = Column(CHAR(1), default='Y', comment='영구 삭제 여부')
+    create_date = Column(DateTime, default=func.now(), comment='생성일자')
 
     def get_user_id(self):
         return self.id

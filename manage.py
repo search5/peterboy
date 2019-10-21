@@ -40,7 +40,7 @@ def upload():
 
 @cli.command()
 def prepare():
-    user = User(username='foo')
+    user = User(username='search5', user_mail='search5', name='이지호', userpw='dmsthfl')
     db_session.add(user)
     db_session.commit()
     client = Client(
