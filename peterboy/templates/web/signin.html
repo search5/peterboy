@@ -1,6 +1,8 @@
 {% extends "web/base.html" %}
 
 {% block script %}
+  <script src="//cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.min.js"></script>
 {% endblock %}
 
 {% block css %}
@@ -91,21 +93,65 @@
 {% endblock %}
 
 {% block main %}
-  <form method="post">
+  <form id="app">
     <label>
       <p class="label-txt">ENTER YOUR ID</p>
-      <input type="text" name="user_id" class="input" autocomplete="off">
+      <input type="text" v-model="user_id" class="input" autocomplete="off" @focus="input_focus" @blur="input_blur">
       <div class="line-box">
         <div class="line"></div>
       </div>
     </label>
     <label>
       <p class="label-txt">ENTER YOUR PASSWORD</p>
-      <input type="text" name="user_password" class="input" autocomplete="off">
+      <input type="text" v-model="user_password" class="input" autocomplete="off" @focus="input_focus" @blur="input_blur">
       <div class="line-box">
         <div class="line"></div>
       </div>
     </label>
-    <button type="submit">로그인</button>
+    <button @click.prevent="submit">로그인</button>
   </form>
+
+  <script>
+  new Vue({
+    el: "#app",
+    data: {
+      user_id: '',
+      user_password: ''
+    },
+    methods: {
+      input_focus: function (e) {
+        e.path[1].children[0].classList.add('label-active')
+      },
+      input_blur: function (e) {
+        e.path[1].children[0].classList.remove('label-active')
+      },
+      submit: function () {
+         if (this.user_id === "") {
+             alert('로그인 아이디를 입력해주세요')
+             return
+         }
+
+         if (this.user_password === "") {
+             alert("비밀번호를 입력해주세요")
+             return
+         }
+
+         var user_id = this.user_id
+
+         axios.post("{{ url_for('signin') }}", {
+             user_id: this.user_id,
+             user_password: this.user_password
+         }).then(function (resp) {
+           if (resp.data.success) {
+             alert("사용자 로그인이 완료되었습니다")
+
+             location.href = "/" + user_id
+           } else {
+             alert(resp.data.message)
+           }
+         })
+      }
+    }
+  })
+  </script>
 {% endblock %}

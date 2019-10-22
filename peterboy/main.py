@@ -26,23 +26,25 @@ login_manager.login_view = "signin"
 
 init_oauth_url(app)
 
+app.add_url_rule('/signup', view_func=UserSignUp.as_view('signup'))
+app.add_url_rule('/signin', view_func=UserSignIn.as_view('signin'))
+
+app.add_url_rule('/oauth/request_token',
+                 view_func=OAuthRequestToken.as_view('request_token'))
+app.add_url_rule('/oauth/authorize', view_func=OAuthorize.as_view('authorize'))
+app.add_url_rule('/oauth/access_token',
+                 view_func=IssueToken.as_view('access_token'))
+
 
 @app.route('/')
 def main():
     return render_template('web/index.html')
 
 
-app.add_url_rule('/signup', view_func=UserSignUp.as_view('signup'))
-app.add_url_rule('/signin', view_func=UserSignIn.as_view('signin'))
-
-app.add_url_rule('/oauth/request_token', view_func=OAuthRequestToken.as_view('initiate_temporary_credential'))
-app.add_url_rule('/oauth/authorize', view_func=OAuthorize.as_view('authorize'))
-app.add_url_rule('/oauth/access_token', view_func=IssueToken.as_view('issue_token'))
-
-
 @app.route("/<username>")
 def user_space(username):
     # TODO 개발
+    # 여기서 무엇을 보여줘야 하나.. 엉?
     return "오시었나 당신아?"
 
 

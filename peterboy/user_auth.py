@@ -40,14 +40,18 @@ class UserSignIn(MethodView):
         return render_template('web/signin.html')
 
     def post(self):
-        user = User.query.filter(
-            User.username == request.form.get('user_id')).first()
+        req_json = request.get_json()
 
-        if user and user.userpw == request.form.get('user_password'):
+        user = User.query.filter(
+            User.username == req_json.get('user_id')).first()
+
+        if user and user.userpw == req_json.get('user_password'):
             login_user(user, remember=True)
-            return redirect(url_for('user_space', username='jiho'))
+            return jsonify(success=True)
         else:
             # TODO: 로그인 실패 페이지로 돌려보내야 함
             # 사용자가 없거나 비밀번호가 일치하지 않습니다
             # 비밀번호는 sha256 등으로 해시 키 구해야 함
-            return redirect(abort(500))
+            return jsonify(
+                success=False,
+                message='입력하신 ID가 없거나 비밀번호가 일치하지 않습니다')

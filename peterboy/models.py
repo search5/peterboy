@@ -147,6 +147,7 @@ class PeterboySync(Base):
 
 
 class PeterboySyncServer(Base):
+    """당분간 사용하지 않겠지만 우선 생성은 해둠(언제 어떻게 쓰게 될지 몰라서...)"""
     __tablename__ = 'peterboy_sync_config'
 
     config_key = Column(String(100), primary_key=True, comment='설정 키')

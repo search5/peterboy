@@ -3,9 +3,7 @@ from flask.views import MethodView
 
 from peterboy.database import db_session
 from peterboy.lib import authorize_check, create_ref
-from peterboy.models import PeterboySync, PeterboyNote, PeterboySyncServer
-
-config_host = PeterboySyncServer.get_config('Host', '')
+from peterboy.models import PeterboySync, PeterboyNote
 
 
 class UserAuthAPI(MethodView):
@@ -13,26 +11,20 @@ class UserAuthAPI(MethodView):
 
     def get(self, token_user=None):
         # 톰보이가 서버 연결 요청 버튼을 누르면 여기로 요청된다.
-        # 여기에서 아이디를 받아 ID별로 사용자 구분(URL의 일부로 받을지 아니면 query param으로 받을건지 고민은 해봐야 함)
-        # 단, URL의 일부로 받을 경우 /api/1.0은 개별 유저 공간에 포함되어야 하고 query param으로 받으면 그대로 루트 URL에 API가 속하게 됨
 
         resp = {
-            "oauth_request_token_url": url_for('initiate_temporary_credential',
-                                               _external=True),
+            "oauth_request_token_url": url_for('request_token', _external=True),
             "oauth_authorize_url": url_for('authorize', _external=True),
-            "oauth_access_token_url": url_for('issue_token', _external=True),
+            "oauth_access_token_url": url_for('access_token', _external=True),
             "api-version": "1.0"
         }
 
         if token_user:
-            user_ref = create_ref('user_detail', 'user_space', username=token_user.username)
+            user_ref = create_ref('user_detail', 'user_space',
+                                  username=token_user.username)
             resp.update({"user-ref": user_ref})
 
         return jsonify(resp)
-
-    def post(self):
-        print("POST 요청")
-        return ""
 
 
 class UserDetailAPI(MethodView):
