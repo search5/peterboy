@@ -45,7 +45,7 @@ def main():
 def user_space(username):
     # TODO 개발
     # 여기서 무엇을 보여줘야 하나.. 엉?
-    return "오시었나 당신아?"
+    return render_template("web/user_space/main.html")
 
 
 @app.route("/<username>/notes")
