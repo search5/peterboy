@@ -148,8 +148,6 @@ class UserNotesAPI(MethodView):
             db_session.add(note)
 
         # 마지막 싱크 리비전 저장
-        print(token_user)
-        print(token_user.id)
         latest_sync_revision = PeterboySync.commit_revision(token_user.id)
 
         db_session.flush()
