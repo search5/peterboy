@@ -12,7 +12,7 @@ from flask_login import LoginManager, login_user
 from oauthlib.oauth1 import OAuth1Error
 
 from peterboy.database import db_session
-from peterboy.lib import new_client
+from peterboy.lib import new_client, authorize_check
 from peterboy.models import Client, TimestampNonce, TemporaryCredential, \
     TokenCredential, User, PeterboyNote, PeterboySyncServer, PeterboySync
 
@@ -80,15 +80,18 @@ class UserSignIn(MethodView):
     def post(self):
         user = User.query.filter(
             User.username == request.form.get('user_id')).first()
-        if user.userpw == request.form.get('user_password'):
+
+        if user and user.userpw == request.form.get('user_password'):
             login_user(user, remember=True)
-            return redirect(url_for('user_space'))
+            return redirect(url_for('user_space', username='jiho'))
         else:
             # TODO: 로그인 실패 페이지로 돌려보내야 함
+            # 사용자가 없거나 비밀번호가 일치하지 않습니다
+            # 비밀번호는 sha256 등으로 해시 키 구해야 함
             return redirect(abort(500))
 
 
-app.add_url_rule('/signin', view_func=UserSignUp.as_view('signin'))
+app.add_url_rule('/signin', view_func=UserSignIn.as_view('signin'))
 
 
 @app.route('/oauth/request_token', methods=['GET', 'POST'])
@@ -122,44 +125,6 @@ def authorize():
 @app.route('/oauth/access_token', methods=['POST'])
 def issue_token():
     return server.create_token_response()
-
-
-def authorization2dict(header):
-    auth_header = header[1:].split(",")
-    resp = {}
-
-    for item in auth_header:
-        first_equal = item.find("=")
-        resp[item[:first_equal]] = item[first_equal + 1:][1:-1]
-
-    return resp
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    print(user_id)
-    return User.query.filter(User.id == user_id).first()
-
-
-def authorize_check(error=True):
-    def authorize_inner(f):
-        @wraps(f)
-        def check(*args, **kwargs):
-            token_credential = None
-
-            if 'Authorization' in request.headers:
-                authorization = authorization2dict(request.headers['Authorization'])
-                token_credential = TokenCredential.query.filter(
-                    TokenCredential.oauth_token == authorization['oauth_token']).first()
-
-            kwargs['token_user'] = token_credential.user if token_credential else None
-
-            if error:
-                abort(500)
-
-            return f(*args, **kwargs)
-        return check
-    return authorize_inner
 
 
 @app.route("/<username>")
@@ -365,3 +330,21 @@ class UserNoteAPI(MethodView):
 
 
 app.add_url_rule('/api/1.0/<username>/notes/<note_id>', view_func=UserNoteAPI.as_view('user_note'))
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.filter(User.username == user_id).first()
+
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    if exception is None:
+        db_session.commit()
+    else:
+        db_session.rollback()
+
+    db_session.remove()
+
+
+
