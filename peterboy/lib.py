@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import request, abort
+from flask import request, abort, url_for
 
 from peterboy.models import Client, TokenCredential
 
@@ -50,3 +50,10 @@ def authorize_check(error=True):
         return check
 
     return authorize_inner
+
+
+def create_ref(api_name, web_route_name, **kwargs):
+    return {
+        "api-ref": url_for(api_name, **kwargs, _external=True),
+        "href": url_for(web_route_name, **kwargs)
+    }
