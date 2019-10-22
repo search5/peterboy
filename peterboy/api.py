@@ -25,8 +25,7 @@ class UserAuthAPI(MethodView):
         }
 
         if token_user:
-            user_ref = create_ref('user_detail', 'user_space',
-                                  username=token_user.username)
+            user_ref = create_ref('user_detail', 'user_space', username=token_user.username)
             resp.update({"user-ref": user_ref})
 
         return jsonify(resp)
@@ -42,15 +41,14 @@ class UserDetailAPI(MethodView):
     def get(self, username, token_user=None):
         latest_sync_revision = PeterboySync.get_latest_revision(token_user.id)
 
+        notes_ref = create_ref('user_notes', 'user_web_notes',
+                              username=token_user.username)
+
         return jsonify({
             "user-name": username,
             "first-name": username,
             "last-name": username,
-            "notes-ref": {
-                "api-ref": url_for('user_notes', username=username,
-                                   _external=True),
-                "href": "{0}/{1}/notes".format(config_host, username)
-            },
+            "notes-ref": notes_ref,
             "latest-sync-revision": latest_sync_revision,
             "current-sync-guid": token_user.current_sync_guid
         })
@@ -78,15 +76,14 @@ class UserNotesAPI(MethodView):
             if include_notes:
                 notes.append(record.toTomboy())
             else:
+                ref = create_ref('user_note', 'user_web_note',
+                                 username=token_user.username,
+                                 note_id=record.id)
+
                 notes.append(dict(
                     guid=record.guid,
                     title=record.title,
-                    ref={
-                        "api-ref": url_for('user_note', username=username,
-                                           note_id=record.id, _external=True),
-                        "href": "{}/{}/notes/{}".format(config_host, username,
-                                                        record.id)
-                    }
+                    ref=ref
                 ))
 
         return jsonify({
@@ -161,22 +158,21 @@ class UserNotesAPI(MethodView):
         # 마지막 싱크 리비전 저장
         latest_sync_revision = PeterboySync.commit_revision(token_user.id)
 
-        db_session.commit()
+        db_session.flush()
 
         # 업데이트된 정보만 내려가도록 변경
         note_records = PeterboyNote.query
         notes = []
 
         for record in note_records:
+            ref = create_ref('user_note', 'user_web_note',
+                             username=token_user.username,
+                             note_id=record.id)
+
             notes.append(dict(
                 guid=record.guid,
                 title=record.title,
-                ref={
-                    "api-ref": url_for('user_note', username=username,
-                                       note_id=record.id, _external=True),
-                    "href": "{}/{}/notes/{}".format(config_host, username,
-                                                    record.id)
-                }
+                ref=ref
             ))
 
         return jsonify({
