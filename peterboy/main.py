@@ -9,7 +9,7 @@ from oauthlib.oauth1 import OAuth1Error
 
 from peterboy.api import UserAuthAPI, UserDetailAPI, UserNotesAPI, UserNoteAPI
 from peterboy.database import db_session
-from peterboy.lib import new_client, authorize_check, create_ref
+from peterboy.lib import new_client, create_ref
 from peterboy.models import User, PeterboyNote, PeterboySyncServer, PeterboySync
 from peterboy.oauth_url import OAuthRequestToken, OAuthorize, IssueToken, init_oauth_url
 from peterboy.user_auth import UserSignUp, UserSignIn

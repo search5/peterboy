@@ -27,29 +27,39 @@ def authorization2dict(header):
     return resp
 
 
-def authorize_check(error=True):
-    def authorize_inner(f):
-        @wraps(f)
-        def check(*args, **kwargs):
-            token_credential = None
+def get_token_credential():
+    if 'Authorization' in request.headers:
+        authorization = authorization2dict(
+            request.headers['Authorization'])
+        token_credential = TokenCredential.query.filter(
+            TokenCredential.oauth_token == authorization['oauth_token']).first()
+        return token_credential
+    return
 
-            if 'Authorization' in request.headers:
-                authorization = authorization2dict(
-                    request.headers['Authorization'])
-                token_credential = TokenCredential.query.filter(
-                    TokenCredential.oauth_token == authorization['oauth_token']).first()
 
-            kwargs[
-                'token_user'] = token_credential.user if token_credential else None
+def authorize_pass(f):
+    @wraps(f)
+    def check(*args, **kwargs):
+        token_credential = get_token_credential()
 
-            if error:
-                abort(500)
+        kwargs['token_user'] = token_credential.user if token_credential else None
 
-            return f(*args, **kwargs)
+        return f(*args, **kwargs)
+    return check
 
-        return check
 
-    return authorize_inner
+def authorize_error(f):
+    @wraps(f)
+    def check(*args, **kwargs):
+        token_credential = get_token_credential()
+
+        if not token_credential:
+            abort(500)
+        else:
+            kwargs['token_user'] = token_credential.user
+
+        return f(*args, **kwargs)
+    return check
 
 
 def create_ref(api_name, web_route_name, **kwargs):

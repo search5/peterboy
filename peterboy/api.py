@@ -2,12 +2,12 @@ from flask import jsonify, url_for, request, abort
 from flask.views import MethodView
 
 from peterboy.database import db_session
-from peterboy.lib import authorize_check, create_ref
+from peterboy.lib import create_ref, authorize_pass, authorize_error
 from peterboy.models import PeterboySync, PeterboyNote
 
 
 class UserAuthAPI(MethodView):
-    decorators = [authorize_check(False)]
+    decorators = [authorize_pass]
 
     def get(self, token_user=None):
         # 톰보이가 서버 연결 요청 버튼을 누르면 여기로 요청된다.
@@ -28,7 +28,7 @@ class UserAuthAPI(MethodView):
 
 
 class UserDetailAPI(MethodView):
-    decorators = [authorize_check]
+    decorators = [authorize_error]
 
     def get(self, username, token_user=None):
         latest_sync_revision = PeterboySync.get_latest_revision(token_user.id)
@@ -47,14 +47,14 @@ class UserDetailAPI(MethodView):
 
 
 class UserNotesAPI(MethodView):
-    decorators = [authorize_check]
+    decorators = [authorize_error]
 
     def get(self, username, token_user=None):
         latest_sync_revision = PeterboySync.get_latest_revision(token_user.id)
 
         since = request.args.get('since', 0, type=int)
 
-        note_records = PeterboyNote.query
+        note_records = PeterboyNote.query.filter(PeterboyNote.user_id == token_user.id)
         if 'since' in request.args:
             note_records = note_records.filter(
                 PeterboyNote.last_sync_revision > since)
@@ -148,6 +148,8 @@ class UserNotesAPI(MethodView):
             db_session.add(note)
 
         # 마지막 싱크 리비전 저장
+        print(token_user)
+        print(token_user.id)
         latest_sync_revision = PeterboySync.commit_revision(token_user.id)
 
         db_session.flush()
@@ -174,7 +176,7 @@ class UserNotesAPI(MethodView):
 
 
 class UserNoteAPI(MethodView):
-    decorators = [authorize_check]
+    decorators = [authorize_error]
 
     def get(self, username, note_id, token_user=None):
         note = PeterboyNote.query.filter(

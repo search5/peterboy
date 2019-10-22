@@ -82,7 +82,7 @@ class PeterboyNote(Base):
 
     id = Column(Integer, primary_key=True)
     guid = Column(String(36), comment='고유키')
-    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))
+    user_id = Column(Integer, ForeignKey('peterboy_user.id', ondelete='CASCADE'))
     title = Column(String(255), comment='노트 제목')
     title_slug = Column(Text, comment='노트 제목(Slugify')
     note_content = Column(Text, comment="노트 내용")
@@ -120,7 +120,7 @@ class PeterboySync(Base):
     __tablename__ = 'peterboy_sync'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))
+    user_id = Column(Integer, ForeignKey('peterboy_user.id', ondelete='CASCADE'))
     latest_sync_revision = Column(Integer, default=0, comment='마지막 싱크 리비전')
 
     @classmethod

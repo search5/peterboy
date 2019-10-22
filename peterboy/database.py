@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 engine_url = 'postgresql+psycopg2://peterboy:peterboy@localhost:5432/peterboy'
 # engine_url = 'postgresql+psycopg2://jiho:dmsthfl@localhost:5432/jiho'
 
-engine = create_engine(engine_url, convert_unicode=True)
+engine = create_engine(engine_url, convert_unicode=True, echo=False)
 db_session = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=False,
                                          bind=engine))
