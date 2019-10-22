@@ -11,7 +11,7 @@ from peterboy.database import Base, db_session
 
 
 class User(Base):
-    __tablename__ = 'user'
+    __tablename__ = 'peterboy_user'
 
     id = Column(Integer, primary_key=True)
     username = Column(String(100), comment='사용자 ID')
@@ -45,7 +45,7 @@ class Client(Base, OAuth1ClientMixin):
     __tablename__ = 'client'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))
+    user_id = Column(Integer, ForeignKey('peterboy_user.id', ondelete='CASCADE'))
     user = relationship('User')
 
 
@@ -53,7 +53,7 @@ class TemporaryCredential(Base, OAuth1TemporaryCredentialMixin):
     __tablename__ = 'temporarycredential'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))
+    user_id = Column(Integer, ForeignKey('peterboy_user.id', ondelete='CASCADE'))
     user = relationship('User')
 
 
@@ -61,7 +61,7 @@ class TokenCredential(Base, OAuth1TokenCredentialMixin):
     __tablename__ = 'tokencredential'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'))
+    user_id = Column(Integer, ForeignKey('peterboy_user.id', ondelete='CASCADE'))
     user = relationship('User')
 
 

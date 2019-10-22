@@ -122,7 +122,7 @@
         <div class="line"></div>
       </div>
     </label>
-    <button @click="submit">회원가입</button>
+    <button @click.prevent="submit">회원가입</button>
   </form>
 
   <script>
@@ -167,13 +167,16 @@
              user_email: this.user_email,
              user_name: this.user_name,
              user_password: this.user_password
-         }).then(function () {
+         }).then(function (resp) {
+           if (resp.data.success) {
              alert("사용자 등록이 완료되었습니다")
+
+             // TODO 노트 목록 페이지로 이동할 것
+           } else {
+             alert(resp.data.message)
+           }
          })
       }
-    },
-    created: function () {
-
     }
   })
   </script>

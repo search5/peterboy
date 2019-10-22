@@ -91,17 +91,17 @@
 {% endblock %}
 
 {% block main %}
-  <form>
+  <form method="post">
     <label>
       <p class="label-txt">ENTER YOUR ID</p>
-      <input type="text" class="input" autocomplete="off">
+      <input type="text" name="user_id" class="input" autocomplete="off">
       <div class="line-box">
         <div class="line"></div>
       </div>
     </label>
     <label>
       <p class="label-txt">ENTER YOUR PASSWORD</p>
-      <input type="text" class="input" autocomplete="off">
+      <input type="text" name="user_password" class="input" autocomplete="off">
       <div class="line-box">
         <div class="line"></div>
       </div>

@@ -8,10 +8,11 @@ from flask.views import MethodView
 from authlib.flask.oauth1 import AuthorizationServer, current_credential
 from authlib.flask.oauth1.sqla import create_query_client_func, \
     register_authorization_hooks
-from flask_login import LoginManager
+from flask_login import LoginManager, login_user
 from oauthlib.oauth1 import OAuth1Error
 
 from peterboy.database import db_session
+from peterboy.lib import new_client
 from peterboy.models import Client, TimestampNonce, TemporaryCredential, \
     TokenCredential, User, PeterboyNote, PeterboySyncServer, PeterboySync
 
@@ -22,9 +23,11 @@ config_host = PeterboySyncServer.get_config('Host', '')
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
+app.config['SECRET_KEY'] = os.urandom(30)
 server = AuthorizationServer(app, query_client=query_client)
 login_manager = LoginManager(app)
 login_manager.session_protection = "strong"
+login_manager.login_view = "signin"
 
 register_authorization_hooks(
     server, db_session,
@@ -46,6 +49,12 @@ class UserSignUp(MethodView):
     def post(self):
         req_json = request.get_json()
 
+        # ID 중복 검사
+        user = User.query.filter(
+            User.username == req_json.get('user_id')).first()
+        if user:
+            return jsonify(success=False, message='가입하시려는 아이디가 있습니다')
+
         user = User(username=req_json.get('user_id'),
                     user_mail=req_json.get('user_email'),
                     name=req_json.get('user_name'),
@@ -53,13 +62,10 @@ class UserSignUp(MethodView):
         db_session.add(user)
         db_session.flush()
 
-        client = Client(
-            user_id=user.id,
-            client_id='anyone',
-            client_secret='anyone',
-            default_redirect_uri='oob',
-        )
+        client = new_client(user.id)
         db_session.add(client)
+
+        login_user(user, remember=True)
 
         return jsonify(success=True)
 
@@ -67,9 +73,22 @@ class UserSignUp(MethodView):
 app.add_url_rule('/signup', view_func=UserSignUp.as_view('signup'))
 
 
-@app.route('/signin')
-def signin():
-    return render_template('web/signin.html')
+class UserSignIn(MethodView):
+    def get(self):
+        return render_template('web/signin.html')
+
+    def post(self):
+        user = User.query.filter(
+            User.username == request.form.get('user_id')).first()
+        if user.userpw == request.form.get('user_password'):
+            login_user(user, remember=True)
+            return redirect(url_for('user_space'))
+        else:
+            # TODO: 로그인 실패 페이지로 돌려보내야 함
+            return redirect(abort(500))
+
+
+app.add_url_rule('/signin', view_func=UserSignUp.as_view('signin'))
 
 
 @app.route('/oauth/request_token', methods=['GET', 'POST'])
@@ -118,7 +137,8 @@ def authorization2dict(header):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.get(user_id)
+    print(user_id)
+    return User.query.filter(User.id == user_id).first()
 
 
 def authorize_check(error=True):
@@ -144,7 +164,7 @@ def authorize_check(error=True):
 
 @app.route("/<username>")
 def user_space(username):
-    return {}
+    return "오시었나 당신아?"
 
 
 @app.route("/favicon.ico")
