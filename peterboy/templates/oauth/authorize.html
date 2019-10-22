@@ -7,33 +7,119 @@
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login2.css') }}">
 
-    <title>Hello, world!</title>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.min.js"></script>
+
+    <title>Peterboy 인증 요청</title>
   </head>
   <body>
-    <main role="main" class="container">
-      <div class="starter-template">
-        <h1>Tomboy Sync Server</h1>
+    <div class="limiter">
+      <div class="container-login100">
+        <div class="wrap-login100" id="login-wrap">
+          <form class="login100-form validate-form" v-if="!logined_after">
+            <span class="login100-form-title p-b-43">
+            피터보이 로그인
+            </span>
+            <div class="wrap-input100 validate-input"
+                 data-validate="Valid email is required: ex@abc.xyz">
+              <input class="input100" type="text" v-model="user_id">
+              <span class="focus-input100"></span>
+              <span class="label-input100">ID</span>
+            </div>
+            <div class="wrap-input100 validate-input"
+                 data-validate="Password is required">
+              <input class="input100" type="password" v-model="user_password">
+              <span class="focus-input100"></span>
+              <span class="label-input100">Password</span>
+            </div>
+            <div class="flex-sb-m w-full p-t-3 p-b-32">
+              <div>
+                <a href="#" class="txt1">
+                  Forgot Password? (현재 지원 계획 없습니다)
+                </a>
+              </div>
+            </div>
+            <div class="container-login100-form-btn">
+              <button class="login100-form-btn" @click.prevent="submit">
+                Login
+              </button>
+            </div>
+          </form>
 
-        <h4>톰보이(Tomboy) 앱이 동기화 서버 접근을 요청합니다. 허용하시겠습니까?</h4>
-        <hr>
-        <b>권한검토</b>
-        <ul>
-          <li>노트 목록 조회</li>
-          <li>노트 조회</li>
-          <li>노트 추가</li>
-          <li>노트 삭제</li>
-          <li>노트 수정</li>
-        </ul>
+          <form class="login100-form validate-form" action="{{ req.uri }}"
+                method="post" v-if="logined_after">
+            <span class="login100-form-title p-b-43">
+              톰보이(Tomboy) 앱이 동기화 서버 접근을 요청합니다. 허용하시겠습니까?</span>
 
-        <form action="{{ req.uri }}" method="post">
-          <input type="hidden" name="granted" value="1">
-          <input type="hidden" name="token" value="{{ req.token }}">
-          <input type="hidden" name="credential" value="{{ req.credential }}">
-          <button type="submit" class="btn btn-primary">인증</button>
-        </form>
+            <b>권한 검토</b>
+            <hr>
+            <ol style="margin-bottom: 60px;">
+              <li>노트 목록 조회</li>
+              <li>노트 조회</li>
+              <li>노트 추가</li>
+              <li>노트 삭제</li>
+              <li>노트 수정</li>
+            </ol>
+
+            <input type="hidden" name="granted" v-model="granted_id">
+            <input type="hidden" name="token" value="{{ req.token }}">
+            <input type="hidden" name="credential" value="{{ req.credential }}">
+
+            <div class="container-login100-form-btn">
+              <button class="login100-form-btn" type="submit">
+                접근을 허용하겠습니다
+              </button>
+            </div>
+          </form>
+
+          <div class="login100-more"
+               style="background: center / contain no-repeat url('{{ url_for('static', filename='images/18ixcu8yv5us5jpg.jpg') }}');">
+          </div>
+        </div>
       </div>
-    </main>
+    </div>
+
+    <script>
+      new Vue({
+        el: "#login-wrap",
+        data: {
+          user_id: '',
+          user_password: '',
+          logined_after: false,
+          granted_id: -1
+        },
+        methods: {
+          submit: function () {
+             if (this.user_id === "") {
+                 alert('로그인 아이디를 입력해주세요')
+                 return
+             }
+
+             if (this.user_password === "") {
+                 alert("비밀번호를 입력해주세요")
+                 return
+             }
+
+             var vm = this
+
+             axios.post("{{ url_for('signin') }}", {
+                 user_id: this.user_id,
+                 user_password: this.user_password
+             }).then(function (resp) {
+               if (resp.data.success) {
+                 vm.logined_after = true
+                 vm.granted_id = resp.data.granted
+               } else {
+                 alert(resp.data.message)
+               }
+             })
+          }
+        }
+      })
+    </script>
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->

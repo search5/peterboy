@@ -15,6 +15,7 @@ server = None
 
 
 def init_oauth_url(wsgi):
+    global server
     query_client = create_query_client_func(db_session, Client)
     server = AuthorizationServer(wsgi, query_client=query_client)
     register_authorization_hooks(

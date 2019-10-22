@@ -47,7 +47,7 @@ class UserSignIn(MethodView):
 
         if user and user.userpw == req_json.get('user_password'):
             login_user(user, remember=True)
-            return jsonify(success=True)
+            return jsonify(success=True, granted=user.id)
         else:
             # TODO: 로그인 실패 페이지로 돌려보내야 함
             # 사용자가 없거나 비밀번호가 일치하지 않습니다
