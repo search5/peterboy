@@ -79,7 +79,8 @@ def paginate_link_tag(item):
     a_tag = paginate.Page.default_link_tag(item)
 
     if item['type'] == 'current_page':
-        return paginate.make_html_tag('li', paginate.make_html_tag('a', a_tag), **{"class": "page-item active"})
+        return paginate.make_html_tag('li', paginate.make_html_tag('a', a_tag),
+                                      **{"class": "page-item active"})
     return paginate.make_html_tag("li", a_tag, **{"class": "page-item"})
 
 
