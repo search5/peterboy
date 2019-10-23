@@ -5,3 +5,6 @@ gunicorn
 authlib
 python-slugify
 flask-login
+python-dateutil
+paginate
+paginate_sqlalchemy

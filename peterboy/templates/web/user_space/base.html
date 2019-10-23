@@ -1,0 +1,50 @@
+{% extends "web/base.html" %}
+
+{% block css %}
+{% endblock %}
+
+{% block script %}
+{% endblock %}
+
+{% block main %}
+  <div class="container-fluid">
+    <div class="row">
+      <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+        <div class="sidebar-sticky">
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link active" href="{{ url_for('user_space', username=current_user.username) }}">
+                <span data-feather="home"></span>
+                대시보드 <span class="sr-only">(current)</span>
+              </a>
+            </li>{#
+            <li class="nav-item">
+              <a class="nav-link" href="#">
+                <span data-feather="file"></span>
+                Notebook
+              </a>
+            </li>#}
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('user_web_notes', username=current_user.username) }}">
+                <span data-feather="shopping-cart"></span>
+                Notes
+              </a>
+            </li>
+            <!-- 관리자 기능 -->
+            {#<li class="nav-item">
+              <a class="nav-link" href="#">
+                <span data-feather="users"></span>
+                Users
+              </a>
+            </li>#}
+          </ul>
+        </div>
+      </nav>
+
+      <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+        {% block right_main %}
+        {% endblock %}
+      </main>
+    </div>
+  </div>
+{% endblock %}

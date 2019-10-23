@@ -1,0 +1,42 @@
+{% extends "web/user_space/base.html" %}
+
+{% block css %}
+{% endblock %}
+
+{% block script %}
+{% endblock %}
+
+{% block right_main %}
+  <table class="table table-hover">
+    <thead>
+    <tr>
+      <th>Title</th>
+      <th>Modified</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for note in paginator %}
+    <tr>
+      <td><a href="{{ url_for('user_web_note', username=current_user.username, note_id=note.id) }}">{{ note.title }}</a></td>
+      <td>{{ note.last_change_date | date_transform }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="row">
+    <div class="col-12">
+    <nav>
+          <ul class="pagination justify-content-start">
+            {{ paginator.pager(
+                 dotdot_attr={'class':'spacer'},
+                 symbol_first='',
+                 symbol_last='',
+                 symbol_previous='<a href="#"><span>&laquo;</span></a>',
+                 symbol_next='<a href="#"><span>&raquo;</span></a>',
+                 link_tag=paginate_link_tag,
+                 url=page_url|safe) | safe }}
+          </ul>
+        </nav>
+    </div>
+  </div>
+{% endblock %}

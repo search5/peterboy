@@ -1,0 +1,36 @@
+{% extends "web/user_space/base.html" %}
+
+{% block css %}
+{% endblock %}
+
+{% block script %}
+{% endblock %}
+
+{% block right_main %}
+  <h5>노트 상세 조회</h5>
+  <div class="card border-light mb-3">
+    <div class="card-header">{{ note.title }}</div>
+    <div class="card-body">
+{#      <h5 class="card-title">Light card title</h5>#}
+      <p class="card-text">{{ note.note_content }}</p>
+      <p class="card-text small">Created Date: {{ note.create_date | date_transform }}<br>
+      Modified Date: {{ note.last_change_date | date_transform }}</p>
+    </div>
+    <div class="card-footer">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="open_on_startup"
+               id="open_on_startup" value="Y">
+        <label class="form-check-label" for="open_on_startup">
+          Open On Startup
+        </label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="pinned"
+               id="pinned" value="N">
+        <label class="form-check-label" for="pinned">
+          Pinned
+        </label>
+      </div>
+    </div>
+  </div>
+{% endblock %}

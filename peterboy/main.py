@@ -1,15 +1,18 @@
 import os
 
+import paginate
+from dateutil.parser import parse
 from flask import Flask, jsonify, request, render_template, url_for, redirect, \
     abort
 from flask.views import MethodView
 
-from flask_login import LoginManager, login_user
-from oauthlib.oauth1 import OAuth1Error
+from flask_login import LoginManager, login_required
+from paginate_sqlalchemy import SqlalchemyOrmWrapper
+from sqlalchemy import desc
 
 from peterboy.api import UserAuthAPI, UserDetailAPI, UserNotesAPI, UserNoteAPI
 from peterboy.database import db_session
-from peterboy.lib import new_client, create_ref
+from peterboy.lib import paginate_link_tag
 from peterboy.models import User, PeterboyNote, PeterboySyncServer, PeterboySync
 from peterboy.oauth_url import OAuthRequestToken, OAuthorize, IssueToken, init_oauth_url
 from peterboy.user_auth import UserSignUp, UserSignIn
@@ -42,22 +45,64 @@ def main():
 
 
 @app.route("/<username>")
+@login_required
 def user_space(username):
-    # TODO 개발
-    # 여기서 무엇을 보여줘야 하나.. 엉?
-    return render_template("web/user_space/main.html")
+    # 등록된 노트 수
+    note_cnt = PeterboyNote.query.join(User).filter(User.username == username)
+
+    # 마지막 싱크 리비전
+    user_record = User.query.filter(User.username == username).first()
+    latest_sync_revision = PeterboySync.get_latest_revision(user_record.id)
+
+    return render_template("web/user_space/main.html",
+                           note_cnt=note_cnt.count(),
+                           latest_sync_revision=latest_sync_revision)
 
 
 @app.route("/<username>/notes")
+@login_required
 def user_web_notes(username):
-    # TODO 개발
-    return "사용자 노트 목록"
+    current_page = request.args.get("page", 1, type=int)
+
+    search_word = request.args.get("search_word", '')
+
+    # if search_option and search_option in ['classify', 'subject']:
+    #     search_column = getattr(FAQ, search_option)
+
+    page_url = url_for("user_web_notes", username=username)
+    if search_word:
+        page_url = url_for("user_web_notes", username=username,
+                           search_word=search_word)
+        page_url = str(page_url) + "&page=$page"
+    else:
+        page_url = str(page_url) + "?page=$page"
+
+    items_per_page = 10
+
+    notes = PeterboyNote.query.join(User).filter(User.username == username)
+    # if search_word:
+    #     records = records.filter(
+    #         search_column.ilike('%{}%'.format(search_word)))
+    notes = notes.order_by(desc(PeterboyNote.id))
+    total_cnt = notes.count()
+
+    paginator = paginate.Page(notes, current_page, page_url=page_url,
+                              items_per_page=items_per_page,
+                              wrapper_class=SqlalchemyOrmWrapper)
+
+    return render_template("web/user_space/notes.html", paginator=paginator,
+                           paginate_link_tag=paginate_link_tag,
+                           page_url=page_url, items_per_page=items_per_page,
+                           total_cnt=total_cnt, page=current_page)
 
 
 @app.route("/<username>/notes/<note_id>")
+@login_required
 def user_web_note(username, note_id):
-    # TODO 개발
-    return "사용자 노트 상세"
+    note = PeterboyNote.query.join(User).filter(
+        User.username == username, PeterboyNote.id == note_id).first()
+
+    return render_template("web/user_space/note_view.html", note=note)
 
 
 @app.route("/favicon.ico")
@@ -84,3 +129,10 @@ def shutdown_session(exception=None):
         db_session.rollback()
 
     db_session.remove()
+
+
+@app.template_filter()
+def date_transform(s):
+    parse_date = parse(s)
+
+    return parse_date.strftime('%Y-%m-%d %H:%M:%S')

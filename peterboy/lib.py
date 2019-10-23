@@ -1,5 +1,6 @@
 from functools import wraps
 
+import paginate
 from flask import request, abort, url_for
 
 from peterboy.models import Client, TokenCredential
@@ -67,3 +68,15 @@ def create_ref(api_name, web_route_name, **kwargs):
         "api-ref": url_for(api_name, **kwargs, _external=True),
         "href": url_for(web_route_name, **kwargs)
     }
+
+
+def paginate_link_tag(item):
+    """
+    Create an A-HREF tag that points to another page usable in paginate.
+    """
+    item['attrs'] = {'class': 'page-link'}
+    a_tag = paginate.Page.default_link_tag(item)
+
+    if item['type'] == 'current_page':
+        return paginate.make_html_tag('li', paginate.make_html_tag('a', a_tag), **{"class": "page-item active"})
+    return paginate.make_html_tag("li", a_tag, **{"class": "page-item"})

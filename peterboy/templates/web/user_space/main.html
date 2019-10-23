@@ -1,4 +1,4 @@
-{% extends "web/base.html" %}
+{% extends "web/user_space/base.html" %}
 
 {% block css %}
 {% endblock %}
@@ -6,5 +6,29 @@
 {% block script %}
 {% endblock %}
 
-{% block main %}
+{% block right_main %}
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Peterboy - Tomboy notes server</h1>
+  </div>
+
+  <p>Peterboy는 Tomboy 및 호환 클라이언트 프로그램이 서버에 저장하고 동기화 기능을 제공합니다.</p>
+  <p>서버 주소는 다음과 같습니다</p>
+  <div class="card">
+    <div class="card-body">
+      {{ url_for('main', _external=True) }}
+    </div>
+  </div>
+
+  <h6 style="margin-top: 10px;">지원하는 클라이언트:</h6>
+  <ul>
+    <li>Tomboy(Linux, Windows)</li>
+  </ul>
+
+  <h6 style="margin-top: 40px;">통계:</h6>
+  <dl>
+    <dt>노트 수</dt>
+    <dd>{{ note_cnt }}</dd>
+    <dt>Sync revision</dt>
+    <dd>{{ latest_sync_revision }}</dd>
+  </dl>
 {% endblock %}
