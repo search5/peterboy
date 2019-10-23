@@ -9,6 +9,7 @@ from subprocess import Popen, PIPE
 
 # export AUTHLIB_INSECURE_TRANSPORT=true
 from peterboy.database import db_session
+from peterboy.lib import TomboyXMLHandler
 from peterboy.models import Client, User, PeterboySyncServer
 
 
@@ -104,38 +105,6 @@ def peterboy_sync_config():
 @cli.command()
 def tomboy_note_parse():
     import xml.sax
-
-    class TomboyXMLHandler(xml.sax.ContentHandler):
-        def __init__(self):
-            super()
-            self.transform = []
-            self.startTag = {"list": "<ul>", "list-item": "<li>",
-                             "bold": "<strong>", "italic": "<em>",
-                             "size:huge": "<h1 style=\"display: inline-block\">",
-                             "size:large": "<h2 style=\"display: inline-block\">",
-                             "size:small": "<small>",
-                             "strikethrough": "<strike>", "monospace": "<pre>",
-                             "highlight": "<span class=\"highlight\">",
-                             "link:internal": "<a class=\"internal\">",
-                             "link:url": "<a class=\"url\">"}
-            self.endTag = {"list": "</ul>", "list-item": "</li>",
-                           "bold": "</strong>", "italic": "</em>",
-                           "size:huge": "</h1>", "size:large": "</h2>",
-                           "size:small": "</small>",
-                           "strikethrough": "</strike>", "highlight": "</span>",
-                           "link:internal": "</a>", "link:url": "</a>"}
-
-        def startElement(self, name, attrs):
-            self.transform.append(self.startTag.get(name, ""))
-
-        def characters(self, content):
-            if self.transform[-1] == '<a class="url">':
-                self.transform[-1] = '<a class="url" href="{}">'.format(content)
-
-            self.transform.append(content)
-
-        def endElement(self, name):
-            self.transform.append(self.endTag.get(name, ""))
 
     parser = xml.sax.make_parser()
     handler = TomboyXMLHandler()
