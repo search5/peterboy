@@ -101,5 +101,48 @@ def peterboy_sync_config():
     click.echo('서버 기본 환경 설정 값이 추가되었습니다 ')
 
 
+@cli.command()
+def tomboy_note_parse():
+    import xml.sax
+
+    class TomboyXMLHandler(xml.sax.ContentHandler):
+        def __init__(self):
+            super()
+            self.transform = []
+            self.startTag = {"list": "<ul>", "list-item": "<li>",
+                             "bold": "<strong>", "italic": "<em>",
+                             "size:huge": "<h1 style=\"display: inline-block\">",
+                             "size:large": "<h2 style=\"display: inline-block\">",
+                             "size:small": "<small>",
+                             "strikethrough": "<strike>", "monospace": "<pre>",
+                             "highlight": "<span class=\"highlight\">",
+                             "link:internal": "<a class=\"internal\">",
+                             "link:url": "<a class=\"url\">"}
+            self.endTag = {"list": "</ul>", "list-item": "</li>",
+                           "bold": "</strong>", "italic": "</em>",
+                           "size:huge": "</h1>", "size:large": "</h2>",
+                           "size:small": "</small>",
+                           "strikethrough": "</strike>", "highlight": "</span>",
+                           "link:internal": "</a>", "link:url": "</a>"}
+
+        def startElement(self, name, attrs):
+            self.transform.append(self.startTag.get(name, ""))
+
+        def characters(self, content):
+            if self.transform[-1] == '<a class="url">':
+                self.transform[-1] = '<a class="url" href="{}">'.format(content)
+
+            self.transform.append(content)
+
+        def endElement(self, name):
+            self.transform.append(self.endTag.get(name, ""))
+
+    parser = xml.sax.make_parser()
+    handler = TomboyXMLHandler()
+    parser.setContentHandler(handler)
+    j = parser.parse(open("note.xml", "r"))
+    print("".join(handler.transform))
+
+
 if __name__ == '__main__':
     cli.main()

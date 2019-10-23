@@ -12,7 +12,7 @@
     <div class="card-header">{{ note.title }}</div>
     <div class="card-body">
 {#      <h5 class="card-title">Light card title</h5>#}
-      <p class="card-text">{{ note.note_content }}</p>
+      <p class="card-text">{{ note.note_content | tomboytohtml }}</p>
       <p class="card-text small">Created Date: {{ note.create_date | date_transform }}<br>
       Modified Date: {{ note.last_change_date | date_transform }}</p>
     </div>
@@ -21,14 +21,14 @@
         <input class="form-check-input" type="checkbox" name="open_on_startup"
                id="open_on_startup" value="Y">
         <label class="form-check-label" for="open_on_startup">
-          Open On Startup
+          톰보이 시작시 열기
         </label>
       </div>
       <div class="form-check">
         <input class="form-check-input" type="checkbox" name="pinned"
                id="pinned" value="N">
         <label class="form-check-label" for="pinned">
-          Pinned
+          화면에 고정
         </label>
       </div>
     </div>

@@ -1,4 +1,6 @@
+import io
 import os
+import xml
 
 import paginate
 from dateutil.parser import parse
@@ -7,12 +9,13 @@ from flask import Flask, jsonify, request, render_template, url_for, redirect, \
 from flask.views import MethodView
 
 from flask_login import LoginManager, login_required
+from markupsafe import Markup
 from paginate_sqlalchemy import SqlalchemyOrmWrapper
 from sqlalchemy import desc
 
 from peterboy.api import UserAuthAPI, UserDetailAPI, UserNotesAPI, UserNoteAPI
 from peterboy.database import db_session
-from peterboy.lib import paginate_link_tag
+from peterboy.lib import paginate_link_tag, TomboyXMLHandler
 from peterboy.models import User, PeterboyNote, PeterboySyncServer, PeterboySync
 from peterboy.oauth_url import OAuthRequestToken, OAuthorize, IssueToken, init_oauth_url
 from peterboy.user_auth import UserSignUp, UserSignIn
@@ -134,5 +137,18 @@ def shutdown_session(exception=None):
 @app.template_filter()
 def date_transform(s):
     parse_date = parse(s)
-
     return parse_date.strftime('%Y-%m-%d %H:%M:%S')
+
+
+@app.template_filter()
+def tomboytohtml(s):
+    parser = xml.sax.make_parser()
+    handler = TomboyXMLHandler()
+    parser.setContentHandler(handler)
+
+    tmp_xml = io.StringIO()
+    tmp_xml.write('<doc>{}</doc>'.format(s))
+    tmp_xml.seek(0)
+
+    parser.parse(tmp_xml)
+    return Markup("".join(handler.transform))
