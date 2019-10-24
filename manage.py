@@ -109,7 +109,7 @@ def tomboy_note_parse():
     parser = xml.sax.make_parser()
     handler = TomboyXMLHandler()
     parser.setContentHandler(handler)
-    j = parser.parse(open("note.xml", "r"))
+    parser.parse(open("note.xml", "r"))
     print("".join(handler.transform))
 
 
