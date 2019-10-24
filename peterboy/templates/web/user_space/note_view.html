@@ -2,17 +2,12 @@
 
 {% block css %}
   <style type="text/css">
-  a.internal {
-    color: deepskyblue !important;
-  }
-
-  a.internal:hover {
-    color: aqua !important;
-  }
-
-  span.highlight {
-    background-color: yellow !important;
-  }
+	div.note {
+		   position: relative;
+		   white-space: -moz-pre-wrap; /* Mozilla */
+ 	      	   white-space: -o-pre-wrap;   /* Opera 7 */
+ 	      	   white-space: pre-wrap;      /* CSS3 */
+ 	      	   word-wrap: break-word;      /* IE 5.5+ */ }
   </style>
 {% endblock %}
 
@@ -25,25 +20,20 @@
     <div class="card-header">{{ note.title }}</div>
     <div class="card-body">
 {#      <h5 class="card-title">Light card title</h5>#}
-      <p class="card-text">{{ note.note_content | tomboytohtml }}</p>
+      <div class="note">
+        <p class="card-text">{{ note.note_content | tomboytohtml }}</p>
+      </div>
       <p class="card-text small">Created Date: {{ note.create_date | date_transform }}<br>
       Modified Date: {{ note.last_change_date | date_transform }}</p>
     </div>
     <div class="card-footer">
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="open_on_startup"
-               id="open_on_startup" value="Y">
-        <label class="form-check-label" for="open_on_startup">
-          톰보이 시작시 열기
-        </label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="pinned"
-               id="pinned" value="N">
-        <label class="form-check-label" for="pinned">
-          화면에 고정
-        </label>
-      </div>
+      <!-- 쪽지 삭제 기능 -->
+      <button id="note_delete">쪽지 삭제</button>
     </div>
   </div>
+  <script type="text/javascript">
+  document.querySelector("#note_delete").addEventListener("click", function (evt) {
+    alert("삭제 버튼을 클릭하셨습니다 ")
+  })
+  </script>
 {% endblock %}

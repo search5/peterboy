@@ -88,28 +88,35 @@ class TomboyXMLHandler(xml.sax.ContentHandler):
     def __init__(self):
         super()
         self.transform = []
-        self.startTag = {"list": "<ul>", "list-item": "<li>",
+        self.startTag = {"list": "<ul>",
+                         "list-item": '<li>',
                          "bold": "<strong>", "italic": "<em>",
-                         "size:huge": "<h1 style=\"display: inline-block\">",
-                         "size:large": "<h2 style=\"display: inline-block\">",
-                         "size:small": "<small>",
-                         "strikethrough": "<strike>", "monospace": "<pre>",
+                         "size:huge": "<span style=\"font-size:xx-large\">",
+                         "size:large": "<span style=\"font-size:xx-large\">",
+                         "size:small": "<span style=\"font-size:small\">",
+                         "strikethrough": "<strike>",
+                         "monospace": '<span style="font-family:monospace">',
                          "highlight": "<span class=\"highlight\">",
                          "link:internal": "<a class=\"internal\">",
                          "link:url": "<a class=\"url\">"}
         self.endTag = {"list": "</ul>", "list-item": "</li>",
                        "bold": "</strong>", "italic": "</em>",
-                       "size:huge": "</h1>", "size:large": "</h2>",
-                       "size:small": "</small>",
+                       "size:huge": "</span>", "size:large": "</span>",
+                       "size:small": "</span>", "monospace": "</span>",
                        "strikethrough": "</strike>", "highlight": "</span>",
                        "link:internal": "</a>", "link:url": "</a>"}
 
     def startElement(self, name, attrs):
-        self.transform.append(self.startTag.get(name, ""))
+        new_tag = self.startTag.get(name, "")
+        self.transform.append(new_tag)
 
     def characters(self, content):
         if self.transform[-1] == '<a class="url">':
-            self.transform[-1] = '<a class="url" href="{}">'.format(content)
+            self.transform[-1] = '<a style="color:#3465A4" href="{}">'.format(content)
+        elif self.transform[-1] == '<a class="internal">':
+            self.transform[-1] = '<a style="color:#204A87" href="#{}">'.format(content)
+        elif self.transform[-1] == '<span class="highlight">':
+            self.transform[-1] = '<span style="background:yellow">'.format(content)
 
         self.transform.append(content)
 

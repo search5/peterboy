@@ -111,16 +111,11 @@ class UserNotesAPI(MethodView):
                 db_session.delete(exist_note)
                 continue
 
-            # 노트 버전이 동일하면 업데이트 하지 않는다
-            if exist_note.note_content_version == entry['note-content-version']:
-                continue
-
             exist_note.title = entry['title']
             exist_note.note_content = entry['note-content']
             exist_note.note_content_version = entry['note-content-version']
             exist_note.last_change_date = entry['last-change-date']
-            exist_note.last_metadata_change_date = entry[
-                'last-metadata-change-date']
+            exist_note.last_metadata_change_date = entry['last-metadata-change-date']
             exist_note.create_date = entry['create-date']
             exist_note.open_on_startup = entry['open-on-startup']
             exist_note.pinned = entry['pinned']
