@@ -138,14 +138,18 @@
 
          var user_id = this.user_id
 
-         axios.post("{{ url_for('signin') }}", {
+         axios.post('{{ url_for('signin') }}', {
              user_id: this.user_id,
              user_password: this.user_password
          }).then(function (resp) {
            if (resp.data.success) {
              alert("사용자 로그인이 완료되었습니다")
 
-             location.href = "/" + user_id
+             if ('{{ request.args.get("next", "") }}' === '') {
+               location.href = "/" + user_id
+             } else {
+               location.href = '{{ request.args.get("next", "") }}'
+             }
            } else {
              alert(resp.data.message)
            }
