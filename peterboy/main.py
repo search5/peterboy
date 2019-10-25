@@ -44,7 +44,10 @@ app.add_url_rule('/oauth/access_token',
 
 @app.route('/')
 def main():
-    return render_template('web/index.html')
+    if current_user.is_anonymous:
+        return render_template('web/index.html')
+    else:
+        return redirect(url_for('user_space', username=current_user.username))
 
 
 @app.route("/<username>")
