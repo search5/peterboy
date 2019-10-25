@@ -51,10 +51,10 @@
       <ul class="navbar-nav ml-auto">
         {% if current_user.is_authenticated %}
           <li class="nav-item">
-            <a class="nav-link" href="#">정보수정</a>
+            <a class="nav-link" href="{{ url_for('mypage') }}">정보수정</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">로그아웃</a>
+            <a class="nav-link" href="{{ url_for('logout') }}">로그아웃</a>
           </li>
         {% else %}
           <li class="nav-item">

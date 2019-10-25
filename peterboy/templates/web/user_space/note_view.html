@@ -33,7 +33,11 @@
   </div>
   <script type="text/javascript">
   document.querySelector("#note_delete").addEventListener("click", function (evt) {
-    alert("삭제 버튼을 클릭하셨습니다 ")
+    if (confirm('정말로 노트를 삭제하시겠습니까?')) {
+      axios.delete('{{ url_for('user_web_note_delete') }}').then(function () {
+        alert('노트가 삭제되었습니다')
+      })
+    }
   })
   </script>
 {% endblock %}

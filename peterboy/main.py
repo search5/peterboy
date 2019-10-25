@@ -8,7 +8,7 @@ from flask import Flask, jsonify, request, render_template, url_for, redirect, \
     abort
 from flask.views import MethodView
 
-from flask_login import LoginManager, login_required
+from flask_login import LoginManager, login_required, current_user, logout_user
 from markupsafe import Markup
 from paginate_sqlalchemy import SqlalchemyOrmWrapper
 from sqlalchemy import desc
@@ -108,9 +108,53 @@ def user_web_note(username, note_id):
     return render_template("web/user_space/note_view.html", note=note)
 
 
+@app.route("/<username>/notes/<note_id>", methods=["DELETE"])
+@login_required
+def user_web_note_delete(username, note_id):
+    note = PeterboyNote.query.join(User).filter(
+        User.username == username, PeterboyNote.id == note_id).first()
+
+    # 로그인한 사용자만 지우도록
+    if current_user.username == username:
+        db_session.delete(note)
+
+    return jsonify(success=True)
+
+
 @app.route("/favicon.ico")
 def favicon_ico():
     return abort(404)
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('main'))
+
+
+@app.route('/mypage')
+def mypage():
+    return render_template("web/mypage.html")
+
+
+@app.route('/mypage', methods=["POST"])
+def mypage_modify():
+    req_json = request.get_json()
+
+    # ID 가져옴
+    user = User.query.filter(User.username == req_json.get('user_id')).first()
+    if not user:
+        return jsonify(success=False, message='수정하려는 사용자가 없습니다')
+
+    user.user_mail = req_json.get('user_email')
+    user.name = req_json.get('user_name')
+
+    # 새 비밀번호 여부
+    if req_json.get('user_password') != "":
+        user.userpw = req_json.get('user_password')
+
+    return jsonify(success=True)
 
 
 app.add_url_rule('/api/1.0', view_func=UserAuthAPI.as_view('user_auth'))
