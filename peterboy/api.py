@@ -3,7 +3,7 @@ from flask.views import MethodView
 
 from peterboy.database import db_session
 from peterboy.lib import create_ref, authorize_pass, authorize_error
-from peterboy.models import PeterboySync, PeterboyNote
+from peterboy.models import PeterboySync, PeterboyNote, PeterboyNotebook
 
 
 class UserAuthAPI(MethodView):
@@ -44,6 +44,14 @@ class UserDetailAPI(MethodView):
             "latest-sync-revision": latest_sync_revision,
             "current-sync-guid": token_user.current_sync_guid
         })
+
+
+def filter_notebook(tags):
+    data = tuple(filter(lambda x: 'system:notebook' in x, tags))
+    if data:
+        return data[0]
+    else:
+        return 'untagged'
 
 
 class UserNotesAPI(MethodView):
@@ -121,6 +129,7 @@ class UserNotesAPI(MethodView):
             exist_note.pinned = entry['pinned']
             exist_note.tags = entry['tags']
             exist_note.last_sync_revision = new_sync_rev
+            exist_note.notebook[0].notebook_name= filter_notebook(entry['tags'])
 
         for entry in note_changes:
             if entry['guid'] in db_updated_guid:
@@ -139,6 +148,8 @@ class UserNotesAPI(MethodView):
             note.open_on_startup = entry['open-on-startup']
             note.pinned = entry['pinned']
             note.tags = entry['tags']
+            note.notebook.append(PeterboyNotebook(
+                note=note, notebook_name=filter_notebook(entry['tags'])))
 
             db_session.add(note)
 

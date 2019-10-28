@@ -4,7 +4,9 @@ from functools import wraps
 import paginate
 from flask import request, abort, url_for
 
-from peterboy.models import Client, TokenCredential
+from peterboy.database import db_session
+from peterboy.models import Client, TokenCredential, PeterboyNote, \
+    PeterboyNotebook
 
 NOTE_DATETIMESTAMP = "%Y-%m-%dT%H:%M:%S.%f+09:00"
 
@@ -122,3 +124,15 @@ class TomboyXMLHandler(xml.sax.ContentHandler):
 
     def endElement(self, name):
         self.transform.append(self.endTag.get(name, ""))
+
+
+def notebook_names(notebook_name):
+    records = db_session.query(PeterboyNotebook.note_id)
+
+    if notebook_name != "untagged":
+        notebook_name = "system:notebook:{}".format(notebook_name)
+
+    if notebook_name:
+        records = records.filter(PeterboyNotebook.notebook_name == notebook_name)
+
+    return records

@@ -1,11 +1,10 @@
-from uuid import uuid4
-
 from authlib.flask.oauth1.sqla import OAuth1ClientMixin, \
     OAuth1TemporaryCredentialMixin, OAuth1TokenCredentialMixin
-from sqlalchemy import Column, Integer, ForeignKey, String, Text, Float, DateTime, Boolean, JSON, CHAR, func
+from sqlalchemy import Column, Integer, ForeignKey, String, Text, Float, DateTime, Boolean, CHAR, func
+from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 from peterboy.database import Base, db_session
 
@@ -73,10 +72,6 @@ class TimestampNonce(Base, OAuth1TokenCredentialMixin):
     timestamp = Column(String(100), comment="timestamp")
 
 
-def set_user_id(self, user_id):
-    self.user_id = user_id
-
-
 class PeterboyNote(Base):
     __tablename__ = 'peterboy_note'
 
@@ -94,6 +89,7 @@ class PeterboyNote(Base):
     open_on_startup = Column(Boolean, comment='톰보이 실행시 같이 보여줄지 여부')
     pinned = Column(Boolean, comment='노트 고정 여부')
     tags = Column(JSON, comment='태그')
+    notebook = relationship("PeterboyNotebook", back_populates="note")
 
     def toTomboy(self, hidden_last_sync_revision=False):
         resp = {
@@ -162,3 +158,12 @@ class PeterboySyncServer(Base):
             return default
         except (OperationalError, ProgrammingError):
             return default
+
+
+class PeterboyNotebook(Base):
+    __tablename__ = 'peterboy_notebook'
+
+    id = Column(Integer, primary_key=True)
+    notebook_name = Column(String(255), comment='쪽지함 이름')
+    note_id = Column(Integer, ForeignKey("peterboy_note.id"), comment='쪽지 ID')
+    note = relationship("PeterboyNote", back_populates="notebook")

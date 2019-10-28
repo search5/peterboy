@@ -15,10 +15,11 @@ from sqlalchemy import desc
 
 from peterboy.api import UserAuthAPI, UserDetailAPI, UserNotesAPI, UserNoteAPI
 from peterboy.database import db_session
-from peterboy.lib import paginate_link_tag, TomboyXMLHandler
-from peterboy.models import User, PeterboyNote, PeterboySyncServer, PeterboySync
+from peterboy.lib import paginate_link_tag, TomboyXMLHandler, notebook_names
+from peterboy.models import User, PeterboyNote, PeterboySync, PeterboyNotebook
 from peterboy.oauth_url import OAuthRequestToken, OAuthorize, IssueToken, init_oauth_url
 from peterboy.user_auth import UserSignUp, UserSignIn
+from peterboy.user_info import MyPage, Logout
 
 os.environ['AUTHLIB_INSECURE_TRANSPORT'] = 'true'
 
@@ -70,22 +71,34 @@ def user_space(username):
 def user_web_notes(username):
     current_page = request.args.get("page", 1, type=int)
 
+    notebook = request.args.get('notebook', '')
     search_word = request.args.get("search_word", '')
 
     # if search_option and search_option in ['classify', 'subject']:
     #     search_column = getattr(FAQ, search_option)
 
-    page_url = url_for("user_web_notes", username=username)
+    page_param = {}
+
+    if notebook:
+        page_param["notebook"] = notebook
+
     if search_word:
-        page_url = url_for("user_web_notes", username=username,
-                           search_word=search_word)
+        page_param["search_word"] = search_word
+
+    page_url = url_for("user_web_notes", username=username, **page_param)
+
+    if len(page_param.keys()) > 0:
         page_url = str(page_url) + "&page=$page"
     else:
         page_url = str(page_url) + "?page=$page"
 
     items_per_page = 10
 
-    notes = PeterboyNote.query.join(User).filter(User.username == username)
+    notebooks = notebook_names(notebook)
+
+    notes = PeterboyNote.query.join(User).outerjoin(PeterboyNotebook).filter(User.username == username)
+    if notebook:
+        notes = notes.filter(PeterboyNotebook.note_id.in_(notebooks))
     # if search_word:
     #     records = records.filter(
     #         search_column.ilike('%{}%'.format(search_word)))
@@ -129,41 +142,12 @@ def favicon_ico():
     return abort(404)
 
 
-@app.route("/logout")
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('main'))
-
-
-@app.route('/mypage')
-def mypage():
-    return render_template("web/mypage.html")
-
-
-@app.route('/mypage', methods=["POST"])
-def mypage_modify():
-    req_json = request.get_json()
-
-    # ID 가져옴
-    user = User.query.filter(User.username == req_json.get('user_id')).first()
-    if not user:
-        return jsonify(success=False, message='수정하려는 사용자가 없습니다')
-
-    user.user_mail = req_json.get('user_email')
-    user.name = req_json.get('user_name')
-
-    # 새 비밀번호 여부
-    if req_json.get('user_password') != "":
-        user.userpw = req_json.get('user_password')
-
-    return jsonify(success=True)
-
-
 app.add_url_rule('/api/1.0', view_func=UserAuthAPI.as_view('user_auth'))
 app.add_url_rule('/api/1.0/<username>', view_func=UserDetailAPI.as_view('user_detail'))
 app.add_url_rule('/api/1.0/<username>/notes', view_func=UserNotesAPI.as_view('user_notes'))
 app.add_url_rule('/api/1.0/<username>/notes/<note_id>', view_func=UserNoteAPI.as_view('user_note'))
+app.add_url_rule('/mypage', view_func=MyPage.as_view('mypage'))
+app.add_url_rule('/logout', view_func=Logout.as_view('logout'))
 
 
 @login_manager.user_loader
@@ -199,3 +183,30 @@ def tomboytohtml(s):
 
     parser.parse(tmp_xml)
     return Markup("".join(handler.transform))
+
+
+@app.context_processor
+def utility_processor():
+    def notebooks():
+        records = db_session.query(PeterboyNote.tags)
+        tags = [
+            {"title": '모든 쪽지',
+             "href": url_for('user_web_notes', username=current_user.username)},
+            {"title": '분류되지 않은 쪽지',
+             "href": url_for('user_web_notes', username=current_user.username,
+                             notebook='untagged')}
+        ]
+
+        for entry in records:
+            notebook = tuple(filter(lambda x: 'system:notebook' in x, entry[0]))
+            if notebook:
+                notebook_name = notebook[0][16:]
+                link = {"title": notebook_name,
+                        "href": url_for('user_web_notes',
+                                        username=current_user.username,
+                                        notebook=notebook_name)}
+                if link not in tags:
+                    tags.append(link)
+
+        return tags
+    return dict(notebooks=notebooks)
