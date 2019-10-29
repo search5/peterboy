@@ -94,7 +94,7 @@ class TomboyXMLHandler(xml.sax.ContentHandler):
                          "list-item": '<li>',
                          "bold": "<strong>", "italic": "<em>",
                          "size:huge": "<span style=\"font-size:xx-large\">",
-                         "size:large": "<span style=\"font-size:xx-large\">",
+                         "size:large": "<span style=\"font-size:large\">",
                          "size:small": "<span style=\"font-size:small\">",
                          "strikethrough": "<strike>",
                          "monospace": '<span style="font-family:monospace">',

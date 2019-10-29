@@ -124,6 +124,27 @@ def user_web_note(username, note_id):
     return render_template("web/user_space/note_view.html", note=note)
 
 
+@app.route("/<username>/notes/<note_id>/edit")
+@login_required
+def user_web_note_edit(username, note_id):
+    note = PeterboyNote.query.join(User).filter(
+        User.username == username, PeterboyNote.id == note_id).first()
+
+    return render_template("web/user_space/note_edit.html", note=note)
+
+
+@app.route("/<username>/notes/<note_id>/edit", methods=["POST"])
+@login_required
+def user_web_note_edit_save(username, note_id):
+    note = PeterboyNote.query.join(User).filter(
+        User.username == username, PeterboyNote.id == note_id).first()
+
+    # 노트 내용을 Tomboy 형식으로 변환할 필요 있음(TODO)
+    note.note_content = request.get_json()['note_content']
+
+    return jsonify(success=True)
+
+
 @app.route("/<username>/notes/<note_id>", methods=["DELETE"])
 @login_required
 def user_web_note_delete(username, note_id):

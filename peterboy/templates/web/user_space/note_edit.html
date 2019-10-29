@@ -1,0 +1,54 @@
+{% extends "web/user_space/base.html" %}
+
+{% block css %}
+  <style type="text/css">
+	div.note {
+		   position: relative;
+		   white-space: -moz-pre-wrap; /* Mozilla */
+ 	      	   white-space: -o-pre-wrap;   /* Opera 7 */
+ 	      	   white-space: pre-wrap;      /* CSS3 */
+ 	      	   word-wrap: break-word;      /* IE 5.5+ */ }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.min.css">
+{% endblock %}
+
+{% block script %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.min.js"></script>
+  <script src="{{ url_for('static', filename='tomboy_note_editor.js') }}"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/js/all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.15.0/umd/popper.min.js"></script>
+{% endblock %}
+
+{% block right_main %}
+  <h5>노트 상세 조회</h5>
+  <div class="card border-light mb-3" id="app">
+    <div class="card-header">{{ note.title }}</div>
+    <div class="card-body">
+      {#<p class="card-text">{{ note.note_content | tomboytohtml }}</p>#}
+      <tomboy-note-editor ref="editor" :content="note_content"></tomboy-note-editor>
+    </div>
+    <div class="card-footer">
+      <button @click.prevent="note_modify">쪽지 수정</button>
+    </div>
+  </div>
+  <script type="text/javascript">
+  new Vue({
+    el: "#app",
+    data: {
+      note_content: `{{ note.note_content | tomboytohtml }}`
+    },
+    methods: {
+      note_modify: function () {
+        var editor = this.$refs.editor
+
+        if (confirm('정말로 노트를 수정하시겠습니까?')) {
+          axios.post('{{ url_for('user_web_note_edit_save', username=note.user.username, note_id=note.id) }}', {note_content: editor.getHtml()}).then(function () {
+            alert('노트가 수정되었습니다')
+          })
+        }
+      }
+    }
+  })
+  </script>
+{% endblock %}
