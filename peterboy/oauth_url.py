@@ -43,7 +43,8 @@ class OAuthorize(MethodView):
         granted = request.form.get('granted')
         if granted:
             grant_user = User.query.get(int(granted))
-            grant_user.current_sync_guid = str(uuid4())
+            if not grant_user.current_sync_guid:
+                grant_user.current_sync_guid = str(uuid4())
         else:
             grant_user = None
 
