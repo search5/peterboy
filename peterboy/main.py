@@ -1,6 +1,7 @@
 import io
 import os
 import xml
+import xml.dom.minidom
 
 import paginate
 from dateutil.parser import parse
@@ -15,7 +16,8 @@ from sqlalchemy import desc
 
 from peterboy.api import UserAuthAPI, UserDetailAPI, UserNotesAPI, UserNoteAPI
 from peterboy.database import db_session
-from peterboy.lib import paginate_link_tag, TomboyXMLHandler, notebook_names
+from peterboy.lib import paginate_link_tag, TomboyXMLHandler, notebook_names, \
+    HTMLToTomboy
 from peterboy.models import User, PeterboyNote, PeterboySync, PeterboyNotebook
 from peterboy.oauth_url import OAuthRequestToken, OAuthorize, IssueToken, init_oauth_url
 from peterboy.user_auth import UserSignUp, UserSignIn
@@ -139,8 +141,22 @@ def user_web_note_edit_save(username, note_id):
     note = PeterboyNote.query.join(User).filter(
         User.username == username, PeterboyNote.id == note_id).first()
 
-    # 노트 내용을 Tomboy 형식으로 변환할 필요 있음(TODO)
-    note.note_content = request.get_json()['note_content']
+    regular_note = request.get_json()['note_content']
+    regular_note = regular_note.replace("<div>", "")
+    regular_note = regular_note.replace("</div>", "")
+    regular_note = regular_note.replace("<br>", "\n")
+
+    parser = xml.sax.make_parser()
+    handler = HTMLToTomboy()
+    parser.setContentHandler(handler)
+
+    tmp_xml = io.StringIO()
+    tmp_xml.write('<doc>{}</doc>'.format(regular_note))
+    tmp_xml.seek(0)
+
+    parser.parse(tmp_xml)
+
+    note.note_content = handler.result
 
     return jsonify(success=True)
 
@@ -203,7 +219,16 @@ def tomboytohtml(s):
     tmp_xml.seek(0)
 
     parser.parse(tmp_xml)
-    return Markup("".join(handler.transform))
+
+    tmp_str = "".join(handler.transform)
+
+    while True:
+        if "<ul><li><ul><li>" in tmp_str:
+            tmp_str = tmp_str.replace("<ul><li><ul><li>", "<ul><ul><li>")
+        else:
+            break
+
+    return Markup(tmp_str.replace("\n", "<br>"))
 
 
 @app.context_processor

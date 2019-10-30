@@ -5,8 +5,7 @@ import paginate
 from flask import request, abort, url_for
 
 from peterboy.database import db_session
-from peterboy.models import Client, TokenCredential, PeterboyNote, \
-    PeterboyNotebook
+from peterboy.models import Client, TokenCredential, PeterboyNotebook
 
 NOTE_DATETIMESTAMP = "%Y-%m-%dT%H:%M:%S.%f+09:00"
 
@@ -124,6 +123,86 @@ class TomboyXMLHandler(xml.sax.ContentHandler):
 
     def endElement(self, name):
         self.transform.append(self.endTag.get(name, ""))
+
+
+class HTMLToTomboy(xml.sax.ContentHandler):
+    def __init__(self):
+        super()
+        self.transform = []
+        self.startTag = ""
+        self.result = ""
+
+    def startElement(self, name, attrs):
+        if name == "doc":
+            return
+
+        if name == "span":
+            # 서체 스타일 및 크기 조정
+            if attrs["style"] == "font-weight: bold;":
+                self.startTag = "bold"
+            elif attrs["style"] == "font-weight: italic;":
+                self.startTag = "italic"
+            elif attrs["style"] == "text-decoration-line: line-through;":
+                self.startTag = "strikethrough"
+            elif attrs["style"] == "background-color: yellow;":
+                self.startTag = "highlight"
+            elif attrs["style"] == "font-family: monospace;":
+                self.startTag = "monospace"
+            elif attrs["style"] == "font-size: small;":
+                self.startTag = "size:small"
+            elif attrs["style"] == "font-size: medium;":
+                return
+            elif attrs["style"] == "font-size: large;":
+                self.startTag = "size:large"
+            elif attrs["style"] == "font-size: xx-large;":
+                self.startTag = "size:huge"
+        elif name == "a":
+            if attrs["href"].startswith("#"):
+                self.startTag = "link:internal"
+            else:
+                self.startTag = "link:url"
+        # else:
+        #     self.startTag = name
+        elif name == "ul":
+            self.startTag = "list"
+        elif name == "li":
+            self.startTag = "list-item"
+
+        self.transform.append("<{}>".format(self.startTag))
+
+    def characters(self, content):
+        self.transform.append(content)
+
+    def endElement(self, name):
+        if name == "doc":
+            return
+
+        tag_match = {"ul": "list", "li": "list-item"}
+
+        if name in ("ul", "li"):
+            self.transform.append("</{}>".format(tag_match[name]))
+        else:
+            self.transform.append("</{}>".format(self.startTag))
+
+    def endDocument(self):
+        self.result = "".join(self.transform)
+
+        while True:
+            nested_list_start_pos = self.result.find("<list><list>")
+            if nested_list_start_pos < 0:
+                break
+
+            nested_list_end_pos = self.result.find("</list>", nested_list_start_pos)
+
+            before_fragment = self.result[:nested_list_start_pos + 6]
+
+            nested_list_fragment = self.result[nested_list_start_pos + 6:nested_list_end_pos + 7]
+
+            after_fragment = self.result[nested_list_end_pos + 7:]
+
+            new_fragment = "{}{}{}{}{}".format(before_fragment, "<list-item>", nested_list_fragment, "</list-item>", after_fragment)
+
+            self.result = new_fragment
 
 
 def notebook_names(notebook_name):

@@ -116,6 +116,8 @@ class UserNotesAPI(MethodView):
             entry = tuple(entry)[0]
 
             if ('command' in entry) and entry['command'] == 'delete':
+                # 노트북 연결 링크도 삭제할 것...
+                db_session.delete(exist_note.notebook[0])
                 db_session.delete(exist_note)
                 continue
 
